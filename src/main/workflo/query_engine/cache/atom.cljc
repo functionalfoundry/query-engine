@@ -10,8 +10,12 @@
       (set-many [_ kvs]
         (swap! data merge kvs)
         (vals kvs))
-      (get-one [_ k]
-        (get @data k))
+      (get-one [this k fetcher]
+        (let [hit (get @data k)]
+          (if (and (nil? hit)
+                   (fn? fetcher))
+            (c/set-one this k (fetcher k))
+            hit)))
       (get-many [this ks fetcher]
         (let [res (select-keys @data ks)
               hits (vals res)

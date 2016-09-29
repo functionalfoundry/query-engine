@@ -11,8 +11,7 @@
             (println "GET" id "FROM DB")
             (d/pull db '[*] id))]
     (if cache
-      (or (c/get-one cache id)
-          (c/set-one cache id (fetch* id)))
+      (c/get-one cache id fetch*)
       (fetch* id))))
 
 (defn- fetch-entities
