@@ -1,4 +1,5 @@
-(ns workflo.query-engine.test-data)
+(ns workflo.query-engine.test-data
+  (:require [datomic.api :as d]))
 
 ;;;; Accounts
 
@@ -100,3 +101,41 @@
           component-libraries
           components
           component-states))
+
+;;;; Datomic test data
+
+(def datomic
+  (letfn [(mktempid [id]
+            (d/tempid :db.part/user id))
+          (mktempids [ids]
+            (map mktempid ids))]
+    (concat (map (fn [account]
+                   (-> account
+                       (update :db/id mktempid)
+                       (update :account/users mktempids)
+                       (update :account/libraries mktempids)))
+                 accounts)
+            (map (fn [user]
+                   (-> user
+                       (update :db/id mktempid)
+                       (update :user/account mktempid)))
+                 users)
+            (map (fn [library]
+                   (-> library
+                       (update :db/id mktempid)
+                       (update :component-library/account mktempid)
+                       (update :component-library/creator mktempid)
+                       (update :component-library/components mktempids)))
+                 component-libraries)
+            (map (fn [component]
+                   (-> component
+                       (update :db/id mktempid)
+                       (update :component/account mktempid)
+                       (update :component/creator mktempid)
+                       (update :component/states mktempids)))
+                 components)
+            (map (fn [state]
+                   (-> state
+                       (update :db/id mktempid)
+                       (update :component-state/component mktempid)))
+                 component-states))))

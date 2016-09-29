@@ -22,6 +22,7 @@
                  ;; Data layers
                  [com.datomic/datomic-free "0.9.5394" :scope "test"
                   :exclusions [com.google.guava/guava]]
+                 [datomic-schema "1.3.0"]
                  [datascript "0.15.4" :scope "test"]])
 
 (require '[adzerk.boot-test :refer :all]
