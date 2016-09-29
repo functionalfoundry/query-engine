@@ -5,7 +5,7 @@
             [workflo.macros.entity.datascript :as ed]
             [workflo.query-engine.cache.atom :refer [atom-cache]]
             [workflo.query-engine.data-layer :as data-layer]
-            [workflo.query-engine.data-layer.datascript :as dsl]
+            [workflo.query-engine.data-layer.datascript :as dl]
             [workflo.query-engine.test-entities]
             [workflo.query-engine.test-data :as test-data]))
 
@@ -23,7 +23,7 @@
              "Test fetching one with cache"
              "Test fetching one without cache"))
   (let [conn (d/create-conn test-schema)
-        layer (dsl/data-layer)
+        layer (dl/data-layer)
         tx (d/transact! conn test-data/combined)
         resolve-id (fn [tempid] ((:tempids tx) tempid))]
     (are [args result]
@@ -79,7 +79,7 @@
              "Test fetching many with cache"
              "Test fetching many without cache"))
   (let [conn (d/create-conn test-schema)
-        layer (dsl/data-layer)
+        layer (dl/data-layer)
         tx (d/transact! conn test-data/combined)
         resolve-id (fn [tempid] ((:tempids tx) tempid))]
     (are [args result]
@@ -142,7 +142,7 @@
              "Test fetching all with cache"
              "Test fetching all without cache"))
   (let [conn (d/create-conn test-schema)
-        layer (dsl/data-layer)
+        layer (dl/data-layer)
         tx (d/transact! conn test-data/combined)
         resolve-id (fn [tempid] ((:tempids tx) tempid))]
     (are [args result]
