@@ -1,14 +1,14 @@
 (ns workflo.query-engine.data-layer.util
   (:refer-clojure :exclude [sort]))
 
-(defonce ^:private sort-params
+(def ^:private sort-params
   #{:sort/attr :sort/order})
 
-(defonce ^:private paginate-params
-  #{:paginate/after-index :paginate/count})
+(def ^:private pagination-params
+  #{:page/after-id :page/count})
 
-(defonce ^:private non-filter-params
-  (clojure.set/union sort-params paginate-params))
+(def ^:private non-filter-params
+  (clojure.set/union sort-params pagination-params))
 
 (defn- filter-param?
   [[k v]]
@@ -17,10 +17,11 @@
 (defn filter-entity
   [data params]
   (let [filter-params (filter filter-param? params)]
-    (when (and data filter-params
-               (every? (fn [[k v]]
-                         (= (get data k) v))
-                       filter-params))
+    (if (and data filter-params (not (empty? filter-params)))
+      (when (every? (fn [[k v]]
+                    (= (get data k) v))
+                  filter-params)
+        data)
       data)))
 
 (defn sort
@@ -32,12 +33,18 @@
 
 (defn paginate
   [params entities]
-  (if (some paginate-params (keys params))
-    (let [after-index (or (:paginate/after-index params) -1)
-          count (or (:paginate/count params) (count entities))]
-      (into [] (comp (drop (inc after-index))
-                     (take count))
-            entities))
+  (if (some pagination-params (keys params))
+    (let [after-id (:page/after-id params)
+          count (or (:page/count params) (count entities))]
+      (if after-id
+        (->> entities
+             (drop-while #(not= (:db/id %) after-id))
+             (rest)
+             (take count)
+             (vec))
+        (->> entities
+             (take count)
+             (vec))))
     entities))
 
 (defn select-attrs

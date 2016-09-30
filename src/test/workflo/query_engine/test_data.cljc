@@ -73,7 +73,8 @@
     :component/name "Dislike Button"
     :component/account -1
     :component/creator -11
-    :component/public? true}
+    :component/public? true
+    :component/states [-10004 -10005]}
    {:db/id -1004
     :component/name "Seat Picker"
     :component/account -2
@@ -93,7 +94,13 @@
     :component-state/component -1002}
    {:db/id -10003
     :component-state/name "Like Button Active"
-    :component-state/component -1002}])
+    :component-state/component -1002}
+   {:db/id -10004
+    :component-state/name "Dislike Button Regular"
+    :component-state/component -1003}
+   {:db/id -10005
+    :component-state/name "Dislike Button Active"
+    :component-state/component -1003}])
 
 ;;;; All test data
 

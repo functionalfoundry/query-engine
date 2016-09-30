@@ -216,8 +216,7 @@
        :entity 'component
        :ids (mapv resolve-id [-1000 -1001 -1002 -1003 -1004])
        :params {:sort/attr :component/name
-                :paginate/after-index -1
-                :paginate/count 3}
+                :page/count 3}
        :attrs [:db/id :component/name]}
       [{:db/id (resolve-id -1001) :component/name "Cart Info"}
        {:db/id (resolve-id -1003) :component/name "Dislike Button"}
@@ -228,8 +227,8 @@
        :entity 'component
        :ids (mapv resolve-id [-1000 -1001 -1002 -1003 -1004])
        :params {:sort/attr :component/name
-                :paginate/after-index 2
-                :paginate/count 3}
+                :page/after-id (resolve-id -1002)
+                :page/count 3}
        :attrs [:db/id :component/name]}
       [{:db/id (resolve-id -1000) :component/name "Shop Item"}])))
 
@@ -338,8 +337,7 @@
       {:viewer (resolve-id -10)
        :entity 'component
        :params {:sort/attr :component/name
-                :paginate/after-index -1
-                :paginate/count 3}
+                :page/count 3}
        :attrs [:db/id :component/name]}
       [{:db/id (resolve-id -1001) :component/name "Cart Info"}
        {:db/id (resolve-id -1003) :component/name "Dislike Button"}
@@ -349,7 +347,7 @@
       {:viewer (resolve-id -10)
        :entity 'component
        :params {:sort/attr :component/name
-                :paginate/after-index 2
-                :paginate/count 3}
+                :page/after-id (resolve-id -1002)
+                :page/count 3}
        :attrs [:db/id :component/name]}
       [{:db/id (resolve-id -1000) :component/name "Shop Item"}])))
