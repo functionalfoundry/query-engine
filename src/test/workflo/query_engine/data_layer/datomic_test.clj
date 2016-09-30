@@ -1,5 +1,6 @@
 (ns workflo.query-engine.data-layer.datomic-test
-  (:require [clojure.test :refer [deftest use-fixtures]]
+  (:require [clojure.spec :as s]
+            [clojure.test :refer [deftest is use-fixtures]]
             [datomic.api :as d]
             [datomic-schema.schema :as ds]
             [environ.core :refer [env]]
@@ -19,6 +20,14 @@
        (map ed/entity-schema)
        (apply concat)))
 
+(ds/defdbfn update-entity [db data spec] :db.part/user
+  (let [entity (merge (datomic.api/pull db '[*] (:db/id data)) data)]
+      (println "ENTITY" data entity)
+      (if (clojure.spec/valid? spec entity)
+        [data]
+        (throw (RuntimeException.
+                (clojure.spec/explain-str spec data))))))
+
 ;;;; Datomic fixture
 
 (defn delete-db []
@@ -30,7 +39,8 @@
 (defn install-schema []
   (d/transact (d/connect (env :datomic-uri))
               (concat (ds/generate-parts [(ds/part "user")])
-                      test-schema)))
+                      test-schema
+                      (ds/dbfns->datomic update-entity))))
 
 (defn datomic-fixture [f]
   (delete-db)
@@ -75,3 +85,22 @@
 
 (deftest fetch-all-with-cache
   (common/test-fetch-all (assoc common-opts :cache (atom-cache))))
+
+;;;; Transact with validation
+
+(defn test-transact-with-validation
+  [{:keys [connect db data-layer transact resolve-tempid]}]
+  (println "Test transacting with validation")
+  (let [conn (connect)
+        layer (data-layer)
+        tx (transact conn)
+        resolve-id (partial resolve-tempid conn tx)]
+    @(d/transact conn
+                 [[:update-entity
+                   {:db/id (d/tempid :db.part/user -999)
+                    :account/name "Incomplete account"
+                    :account/users []}
+                   (test-entity-specs)]])))
+
+(deftest transact-with-validation
+  (test-transact-with-validation common-opts))
