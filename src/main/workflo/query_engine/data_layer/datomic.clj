@@ -5,27 +5,47 @@
             [workflo.query-engine.data-layer :refer [DataLayer]]
             [workflo.query-engine.data-layer.util :as util]))
 
+(defn authorized?
+  [db entity e viewer]
+  (if-let [auth-rules (some-> (:auth entity) (apply [{}]))]
+    (let [results (map (fn [auth-rule]
+                         (d/q '[:find ?e
+                                :in $ ?e ?viewer %
+                                :where (auth ?e ?viewer)]
+                              db e viewer [auth-rule]))
+                       auth-rules)]
+      (not (empty? (apply concat results))))
+    true))
+
 (defn- fetch-entity
-  [{:keys [db cache]} entity id]
+  [{:keys [db cache viewer]} entity id]
   (letfn [(fetch* [id]
-            (d/pull db '[*] id))]
+            (d/q '[:find (pull ?e [*]) .
+                   :in $ ?e ?entity ?viewer
+                   :where [(workflo.query-engine.data-layer.datomic/authorized?
+                            $ ?entity ?e ?viewer)]]
+                 db id entity viewer))]
     (if cache
       (c/get-one cache id fetch*)
       (fetch* id))))
 
 (defn- fetch-entities
-  ([{:keys [db] :as env} entity]
+  ([{:keys [db viewer] :as env} entity]
    (let [req-attrs (remove #{:db/id} (es/required-keys entity))
          ids (d/q '[:find [?e ...]
-                    :in $ [?a ...]
-                    :where [?e ?a]]
-                  db req-attrs)]
+                    :in $ [?a ...] ?entity ?viewer
+                    :where [?e ?a]
+                           [(workflo.query-engine.data-layer.datomic/authorized?
+                             $ ?entity ?e ?viewer)]]
+                  db req-attrs entity viewer)]
      (fetch-entities env entity ids)))
-  ([{:keys [db cache]} entity ids]
+  ([{:keys [db cache viewer]} entity ids]
    (letfn [(fetch* [ids]
              (d/q '[:find [(pull ?e [*]) ...]
-                    :in $ [?e ...]]
-                  db ids))]
+                    :in $ [?e ...] ?entity ?viewer
+                    :where [(workflo.query-engine.data-layer.datomic/authorized?
+                             $ ?entity ?e ?viewer)]]
+                  db ids entity viewer))]
      (if cache
        (c/get-many cache ids
                    (fn [missing-ids]

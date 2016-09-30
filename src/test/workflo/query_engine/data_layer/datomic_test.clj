@@ -50,28 +50,29 @@
    :resolve-tempid (fn [conn tx id]
                      (d/resolve-tempid (d/db conn) (:tempids tx)
                                        (d/tempid :db.part/user id)))
-   :data-layer dl/data-layer})
+   :data-layer dl/data-layer
+   :new-cache #(atom-cache)})
 
 ;;;; Fetch individual entities
 
 (deftest fetch-one-without-cache
-  (common/test-fetch-one (assoc common-opts :cache nil)))
+  (common/test-fetch-one (assoc common-opts :cache? false)))
 
 (deftest fetch-one-with-cache
-  (common/test-fetch-one (assoc common-opts :cache (atom-cache))))
+  (common/test-fetch-one (assoc common-opts :cache? true)))
 
-;;;; Fetch a collection of entities
+;;;;;; Fetch a collection of entities
 
 (deftest fetch-many-without-cache
-  (common/test-fetch-many (assoc common-opts :cache nil)))
+  (common/test-fetch-many (assoc common-opts :cache? false)))
 
 (deftest fetch-many-with-cache
-  (common/test-fetch-many (assoc common-opts :cache (atom-cache))))
+  (common/test-fetch-many (assoc common-opts :cache? true)))
 
-;;;; Fetch all instances of an entity
+;;;;;; Fetch all instances of an entity
 
 (deftest fetch-all-without-cache
-  (common/test-fetch-all (assoc common-opts :cache nil)))
+  (common/test-fetch-all (assoc common-opts :cache? false)))
 
 (deftest fetch-all-with-cache
-  (common/test-fetch-all (assoc common-opts :cache (atom-cache))))
+  (common/test-fetch-all (assoc common-opts :cache? true)))
