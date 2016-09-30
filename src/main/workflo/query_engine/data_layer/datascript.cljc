@@ -42,9 +42,9 @@
       (some->> (fetch-entities env entity ids)
                (map #(util/filter-entity % params))
                (map #(util/select-attrs % attrs))
-               (into #{})))
+               (util/sort params)))
     (fetch-all [_ env entity params attrs]
       (some->> (fetch-entities env entity)
                (map #(util/filter-entity % params))
                (map #(util/select-attrs % attrs))
-               (into #{})))))
+               (util/sort params)))))

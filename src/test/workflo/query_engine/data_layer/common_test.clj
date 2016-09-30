@@ -104,7 +104,26 @@
          :component-library/account {:db/id (resolve-id -1)}
          :component-library/creator {:db/id (resolve-id -10)}
          :component-library/components [{:db/id (resolve-id -1002)}
-                                        {:db/id (resolve-id -1003)}]}})))
+                                        {:db/id (resolve-id -1003)}]}}
+
+      ;; Fetch instaces with sorting (ascending)
+      ['component-library [(resolve-id -100) (resolve-id -101)
+                           (resolve-id -102)]
+       {:sort/attr :component-library/name}
+       [:component-library/name]]
+      [{:component-library/name "Event Site Components"}
+       {:component-library/name "Shop Components"}
+       {:component-library/name "Social Network Components"}]
+
+      ;; Fetch instaces with sorting (descending)
+      ['component-library [(resolve-id -100) (resolve-id -101)
+                           (resolve-id -102)]
+       {:sort/attr :component-library/name
+        :sort/order :sort/descending}
+       [:component-library/name]]
+      [{:component-library/name "Social Network Components"}
+       {:component-library/name "Shop Components"}
+       {:component-library/name "Event Site Components"}])))
 
 (defn test-fetch-all
   [{:keys [connect db data-layer transact resolve-tempid cache]}]
