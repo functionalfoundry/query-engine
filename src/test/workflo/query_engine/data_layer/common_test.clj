@@ -123,7 +123,26 @@
        [:component-library/name]]
       [{:component-library/name "Social Network Components"}
        {:component-library/name "Shop Components"}
-       {:component-library/name "Event Site Components"}])))
+       {:component-library/name "Event Site Components"}]
+
+      ;; Fetch instances with pagination
+      ['component (mapv resolve-id [-1000 -1001 -1002 -1003 -1004])
+       {:sort/attr :component/name
+        :paginate/after-index -1
+        :paginate/count 3}
+       [:db/id :component/name]]
+      [{:db/id (resolve-id -1001) :component/name "Cart Info"}
+       {:db/id (resolve-id -1003) :component/name "Dislike Button"}
+       {:db/id (resolve-id -1002) :component/name "Like Button"}]
+
+      ;; Fetch another "page"
+      ['component (mapv resolve-id [-1000 -1001 -1002 -1003 -1004])
+       {:sort/attr :component/name
+        :paginate/after-index 2
+        :paginate/count 3}
+       [:db/id :component/name]]
+      [{:db/id (resolve-id -1004) :component/name "Seat Picker"}
+       {:db/id (resolve-id -1000) :component/name "Shop Item"}])))
 
 (defn test-fetch-all
   [{:keys [connect db data-layer transact resolve-tempid cache]}]
@@ -181,4 +200,36 @@
         {:component-library/name "Event Site Components"
          :component-library/account {:db/id (resolve-id -2)}
          :component-library/creator {:db/id (resolve-id -11)}
-         :component-library/components [{:db/id (resolve-id -1004)}]}})))
+         :component-library/components [{:db/id (resolve-id -1004)}]}}
+
+      ;; Fetch instaces with sorting (ascending)
+      ['component-library {:sort/attr :component-library/name}
+       [:component-library/name]]
+      [{:component-library/name "Event Site Components"}
+       {:component-library/name "Shop Components"}
+       {:component-library/name "Social Network Components"}]
+
+      ;; Fetch instaces with sorting (descending)
+      ['component-library {:sort/attr :component-library/name
+                           :sort/order :sort/descending}
+       [:component-library/name]]
+      [{:component-library/name "Social Network Components"}
+       {:component-library/name "Shop Components"}
+       {:component-library/name "Event Site Components"}]
+
+      ;; Fetch instances with pagination
+      ['component {:sort/attr :component/name
+                   :paginate/after-index -1
+                   :paginate/count 3}
+       [:db/id :component/name]]
+      [{:db/id (resolve-id -1001) :component/name "Cart Info"}
+       {:db/id (resolve-id -1003) :component/name "Dislike Button"}
+       {:db/id (resolve-id -1002) :component/name "Like Button"}]
+
+      ;; Fetch another "page"
+      ['component {:sort/attr :component/name
+                   :paginate/after-index 2
+                   :paginate/count 3}
+       [:db/id :component/name]]
+      [{:db/id (resolve-id -1004) :component/name "Seat Picker"}
+       {:db/id (resolve-id -1000) :component/name "Shop Item"}])))
