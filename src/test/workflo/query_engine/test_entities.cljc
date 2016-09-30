@@ -14,10 +14,14 @@
 (s/def :account/libraries (t/entity-ref 'component-library :many? true))
 
 (defentity account
-  (spec (s/keys :req [:db/id
-                      :account/name
-                      :account/users]
-                :opt [:account/libraries])))
+  (auth [db e viewer]
+    '[[(auth ?e ?viewer)
+       [?e :account/users ?viewer]]])
+  (spec
+    (s/keys :req [:db/id
+                  :account/name
+                  :account/users]
+            :opt [:account/libraries])))
 
 ;;;; User
 
@@ -27,11 +31,18 @@
 (s/def :user/account (t/entity-ref 'account))
 
 (defentity user
-  (spec (s/keys :req [:db/id
-                      :user/name
-                      :user/email
-                      :user/password
-                      :user/account])))
+  (auth [db e viewer]
+    '[[(auth ?e ?viewer)
+       [(= ?e ?viewer)]]
+      [(auth ?e ?viewer)
+       [?a :account/users ?viewer]
+       [?a :account/users ?e]]])
+  (spec
+    (s/keys :req [:db/id
+                  :user/name
+                  :user/email
+                  :user/password
+                  :user/account])))
 
 ;;;; Component library
 
@@ -40,13 +51,22 @@
 (s/def :component-library/creator (t/entity-ref 'user))
 (s/def :component-library/components
   (t/entity-ref 'component :many? true))
+(s/def :component-library/public? ::t/boolean)
 
 (defentity component-library
-  (spec (s/keys :req [:db/id
-                      :component-library/name
-                      :component-library/account
-                      :component-library/creator]
-                :opt [:component-library/components])))
+  (auth [db e viewer]
+    '[[(auth ?e ?viewer)
+       [?e :component-library/account ?a]
+       [?viewer :user/account ?a]]
+      [(auth ?e ?viewer)
+       [?e :component-library/public? true]]])
+  (spec
+    (s/keys :req [:db/id
+                  :component-library/name
+                  :component-library/account
+                  :component-library/creator]
+            :opt [:component-library/components
+                  :component-library/public?])))
 
 ;;;; Component
 
@@ -54,13 +74,22 @@
 (s/def :component/account (t/entity-ref 'account))
 (s/def :component/creator (t/entity-ref 'user))
 (s/def :component/states (t/entity-ref 'component-state :many? true))
+(s/def :component/public? ::t/boolean)
 
 (defentity component
-  (spec (s/keys :req [:db/id
-                      :component/name
-                      :component/account
-                      :component/creator]
-                :opt [:component/states])))
+  (auth [db e viewer]
+    '[[(auth ?e ?viewer)
+       [?e :component/account ?a]
+       [?viewer :user/account ?a]]
+      [(auth ?e ?viewer)
+       [?e :component/public? true]]])
+  (spec
+    (s/keys :req [:db/id
+                  :component/name
+                  :component/account
+                  :component/creator]
+            :opt [:component/states
+                  :component/public?])))
 
 ;;;; Component state
 
@@ -68,6 +97,15 @@
 (s/def :component-state/component (t/entity-ref 'component))
 
 (defentity component-state
-  (spec (s/keys :req [:db/id
-                      :component-state/name
-                      :component-state/component])))
+  (auth [db e viewer]
+    '[[(auth ?e ?viewer)
+       [?c :component/states ?e]
+       [?c :component/account ?a]
+       [?viewer :user/account ?a]]
+      [(auth ?e ?viewer)
+       [?c :component/states ?e]
+       [?c :component/public? true]]])
+  (spec
+     (s/keys :req [:db/id
+                   :component-state/name
+                   :component-state/component])))
