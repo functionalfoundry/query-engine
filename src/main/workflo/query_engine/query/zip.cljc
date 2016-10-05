@@ -69,6 +69,9 @@
 
 ;;;; Query tree navigation
 
+(defn parent-query [qz]
+  (zip/up qz))
+
 (defn first-subquery [qz]
   (when (query-root? qz)
     (zip/down qz)))

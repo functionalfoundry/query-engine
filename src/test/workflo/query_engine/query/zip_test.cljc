@@ -63,6 +63,35 @@
 
 ;;;; Navigating the query tree
 
+(deftest parent-query
+  (and
+   ;; Query root
+   (is (nil? (qz/parent-query (qz/query-zipper [:a :b :c]))))
+
+   ;; Keyword
+   (is (nil? (qz/parent-query (qz/query-zipper :a))))
+   (is (= [:a :b :c] (-> [:a :b :c] qz/query-zipper
+                         qz/first-subquery qz/parent-query
+                         zip/node)))
+
+   ;; Ident
+   (is (nil? (qz/parent-query (qz/query-zipper '[:a _]))))
+   (is (= '[:a [:b _] :c] (-> '[:a [:b _] :c] qz/query-zipper
+                              qz/first-subquery qz/next-query
+                              qz/parent-query zip/node)))
+
+   ;; Join
+   (is (nil? (qz/parent-query (qz/query-zipper '{:a [:b :c]}))))
+   (is (= [:a {:b [:c :d]} :e] (-> [:a {:b [:c :d]} :e] qz/query-zipper
+                                   qz/first-subquery qz/next-query
+                                   qz/parent-query zip/node)))
+
+   ;; Param
+   (is (nil? (qz/parent-query (qz/query-zipper '(:a {:b :c})))))
+   (is (= '[:a (:b {:c :d}) :e] (-> '[:a (:b {:c :d}) :e] qz/query-zipper
+                                    qz/first-subquery qz/next-query
+                                    qz/parent-query zip/node)))))
+
 (deftest first-subquery-next-query-and-last-query?
   (let [z (qz/query-zipper '[:a {:b [:c]} (:d {:e :f})])]
     (and (is (= :a (-> z qz/first-subquery zip/node)))
