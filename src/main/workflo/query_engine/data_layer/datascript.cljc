@@ -7,17 +7,13 @@
 
 (defn authorized?
   [db entity e viewer]
-  ;; (println "AUTHORIZED?" e viewer)
-  ;; (clojure.pprint/pprint (d/datoms db :aevt))
   (if-let [auth-rules (some-> (:auth entity) (apply [{}]))]
     (let [results (mapv (fn [auth-rule]
-                          ;; (println "AUTH RULE" auth-rule)
                           (d/q '[:find ?e
                                  :in $ ?e ?viewer %
                                  :where (auth ?e ?viewer)]
                                db e viewer [auth-rule]))
                         auth-rules)]
-      ;; (println "RULE RESULTS" results)
       (not (empty? (apply concat results))))
     true))
 
