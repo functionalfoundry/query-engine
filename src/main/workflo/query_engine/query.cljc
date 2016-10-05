@@ -273,16 +273,14 @@
 
 (defmethod process-expr [:toplevel :query]
   [query data ctx]
-  (println "PROCESS :toplevel :query" (zip/node query))
   (process-query query data ctx))
 
 (defmethod process-expr [:nested :query]
   [query data ctx]
-  (println "PROCESS :nested :query" (zip/node query))
   (process-query query data ctx))
 
-(defn process [query data ctx]
-  (process-expr query data ctx))
+(defn process [query ctx]
+  (process-expr (query-zipper query) (data-zipper) ctx))
 
 (comment
   (do
@@ -316,23 +314,21 @@
     (def linda (realid -12)))
 
   (do
-    (def qz (query-zipper
-             `[{:components [:db/id :component/name
-                             {:component/states
-                              [:component-state/name]}
-                             {[:component-state ~(realid -10001)]
-                              [:db/id :component-state/name
-                               {:component-state/component
-                                [:component/name]}]}]}
-               {:component-states [:db/id :component-state/name]}
-               {[:component-state ~(realid -10002)]
-                [:db/id :component-state/name
-                 {:component-state/component
-                  [:component/name]}]}]))
+    (def query `[{:components [:db/id :component/name
+                               {:component/states
+                                [:component-state/name]}
+                               {[:component-state ~(realid -10001)]
+                                [:db/id :component-state/name
+                                 {:component-state/component
+                                  [:component/name]}]}]}
+                 {:component-states [:db/id :component-state/name]}
+                 {[:component-state ~(realid -10002)]
+                  [:db/id :component-state/name
+                   {:component-state/component
+                    [:component/name]}]}])
     ;;(:users {:db/id ~(realid -10)})
-    (def dz (data-zipper))
     (clojure.pprint/pprint
-     (process qz dz {:data-layer datomic-layer
+     (process query {:data-layer datomic-layer
                      :cache (atom-cache)
                      :db (d/db conn)
                      :viewer linda})))
