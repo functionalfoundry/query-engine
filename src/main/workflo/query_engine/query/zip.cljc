@@ -97,3 +97,53 @@
 (defn param-map [qz]
   (if (param-expr? qz)
     (zip/right (zip/down qz))))
+
+;;;; Query tree processing
+
+(defn process-keyword [qz ctx f ret]
+  (println "KEYWORD")
+  (f ret qz ctx))
+
+(defn process-ident [qz ctx f ret]
+  (println "IDENT")
+  (f ret qz ctx))
+
+(defn process-join [qz ctx f ret]
+  (println "JOIN")
+  (let [ret' (f ret qz ctx)]
+    (cond
+      (query-root? (join-query qz))
+      (process-query-root (join-query qz) ctx f ret')
+
+      ;; TODO: union-expr? + recur-expr?
+      )))
+
+(defn process-plain-query-expr [qz ctx f ret]
+  (cond
+    (keyword? (zip/node qz)) (process-keyword qz ctx f ret)
+    (ident-expr? qz) (process-ident qz ctx f ret)
+    (join-expr? qz) (process-join qz ctx f ret)))
+
+(defn process-param-expr [qz _ f ret]
+  (println "PARAM")
+  (let [query (param-query qz)
+        params (zip/node (param-map qz))]
+    (process-plain-query-expr query {:params params} f ret)))
+
+(defn process-query-expr [qz _ f ret]
+  (println "QUERY")
+  (cond
+    (plain-query-expr? qz) (process-plain-query-expr qz nil f ret)
+    (param-expr? qz) (process-param-expr qz nil f ret)))
+
+(defn process-query-root [qz _ f ret]
+  (println "QUERY ROOT")
+  (loop [ret ret sub-qz (first-subquery qz)]
+    (let [ret' (process-query-expr sub-qz nil f ret)]
+      (if (last-query? sub-qz)
+        ret'
+        (recur ret' (next-query sub-qz))))))
+
+(defn process [qz f ret]
+  (when (query-root? qz)
+    (process-query-root qz nil f ret)))

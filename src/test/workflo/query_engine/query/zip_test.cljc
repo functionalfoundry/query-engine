@@ -136,3 +136,51 @@
    (let [z (qz/query-zipper '({:a [:b :c]} {:d :e}))]
      (and (is (= '{:a [:b :c]} (zip/node (qz/param-query z))))
           (is (= {:d :e} (zip/node (qz/param-map z))))))))
+
+(comment
+  ;; Processing
+
+  (defn fetch-join-data [parent-data z ctx]
+    (println "    FETCH JOIN DATA")
+    (if-not parent-data
+      (do
+        ;; NO PARENT DATA
+        ;;  (keyword? join-source) -> Fetch one or many
+        ;;  (ident? join-source) -> Fetch one
+        )
+      (do
+        ;; PARENT DATA
+        ;;  (keyword? join-source)
+        ;;    -> Extract values (IDs) of join source attrs in parent/parents
+        ;;    -> Identify the target entity of the join source attr
+        ;;    -> Fetch items of that entity with the IDs
+        ;;    -> Spread the results across all parent entities,
+        ;;       depending on which parent entity refered to which item
+        ;;  (ident? join-source)
+        ;;    -> Fetch data for the ident
+        ;;    -> Insert it into all parents using the ident's name as the key
+        )
+      ))
+
+  (defn fetch-data [parent-data z ctx]
+    (println "  FETCH DATA FOR" (zip/node z))
+    (println "            ctx" ctx)
+    (println "    parent data" parent-data)
+    (cond
+      (qz/join-expr? z) (fetch-join-data parent-data z ctx)
+      :else parent-data))
+
+  (let [z (qz/query-zipper
+           '[({:components
+               [:db/id
+                :component/name
+                ({:component/states
+                  [:db/id
+                   :component-state/name
+                   {:component-state/component [:component/name]}]}
+                 {:sort/attr :component-state/name})]}
+              {:sort/attr :component/name})])]
+    (qz/process z fetch-data nil))
+
+
+  )
