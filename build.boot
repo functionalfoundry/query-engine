@@ -17,6 +17,7 @@
                  ;; General
                  [inflections "0.12.2"]
                  [environ "1.1.0"]
+                 [org.omcljs/om "1.0.0-alpha46"]
                  [workflo/macros "0.2.16"]
 
                  ;; Data layers
