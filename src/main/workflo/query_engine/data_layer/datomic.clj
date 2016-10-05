@@ -62,14 +62,14 @@
               (with-meta {:entity entity})))
     (fetch-many [_ env entity ids params attrs]
       (some->> (fetch-entities env entity ids)
-               (map #(util/filter-entity % params))
+               (keep #(util/filter-entity % params))
                (map #(util/select-attrs % attrs))
                (map #(with-meta % {:entity entity}))
                (util/sort params)
                (util/paginate params)))
     (fetch-all [_ env entity params attrs]
       (some->> (fetch-entities env entity)
-               (map #(util/filter-entity % params))
+               (keep #(util/filter-entity % params))
                (map #(util/select-attrs % attrs))
                (map #(with-meta % {:entity entity}))
                (util/sort params)

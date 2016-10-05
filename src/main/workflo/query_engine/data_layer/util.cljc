@@ -16,11 +16,12 @@
 
 (defn filter-entity
   [data params]
-  (let [filter-params (seq (filter filter-param? params))]
+  (if-let [filter-params (seq (filter filter-param? params))]
     (when (every? (fn [[k v]]
                     (= (get data k) v))
                   filter-params)
-      data)))
+      data)
+    data))
 
 (defn sort
   [params entities]
