@@ -107,6 +107,10 @@
   (if (ident-expr? z)
     (zip/down z)))
 
+(defn ident-value [z]
+  (if (ident-expr? z)
+    (zip/right (zip/down z))))
+
 (defn query-key [z]
   (cond
     (keyword? (zip/node z)) (zip/node z)

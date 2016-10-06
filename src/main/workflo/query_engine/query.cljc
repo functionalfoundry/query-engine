@@ -22,15 +22,19 @@
 ;;;; Data fetching
 
 (defn fetch-entity-data [env entity singular? id-or-ids attrs params]
-  (let [env (select-keys env [:cache :db :viewer])
+  (let [env (select-keys env [:cache :data-layer :db :viewer])
         attrs (into [:db/id] attrs)]
     (if singular?
       (if-let [id (or id-or-ids (:db/id params))]
-        (data-layer/fetch-one (:data-layer env)
-                              {:db (:db env)
-                               :cache (:cache env)
-                               :viewer (:viewer env)}
-                              entity id params attrs)))))
+        (data-layer/fetch-one (:data-layer env) env entity
+                              id params attrs)
+        (first (data-layer/fetch-all (:data-layer env) env entity
+                                     params attrs)))
+      (if id-or-ids
+        (data-layer/fetch-many (:data-layer env) env entity
+                               id-or-ids params attrs)
+        (data-layer/fetch-all (:data-layer env) env entity
+                              params attrs)))))
 
 (defn fetch-keyword-data [env parent-data z ctx]
   (if (qz/toplevel? z)
@@ -39,14 +43,26 @@
           data (fetch-entity-data env entity
                                   (singular-key? key)
                                   nil [] (:params ctx))]
-      (println "DATA" data)
-      (zip/edit parent-data assoc key (:name entity)))
+      (zip/edit parent-data assoc key data))
     parent-data))
+
+(defn fetch-ident-data [env parent-data z ctx]
+  (let [key (qz/query-key z)
+        value (zip/node (qz/ident-value z))
+        entity (entity-from-query-key key)
+        data (fetch-entity-data env entity true
+                                (when (not= value '_)
+                                  value)
+                                [] (:params ctx))]
+    (zip/edit parent-data assoc key data)))
 
 (defn fetch-data [env parent-data z ctx]
   (cond
     (keyword? (zip/node z))
     (fetch-keyword-data env parent-data z ctx)
+
+    (qz/ident-expr? z)
+    (fetch-ident-data env parent-data z ctx)
 
     :else
     parent-data))
