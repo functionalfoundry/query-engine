@@ -29,29 +29,46 @@
       ;; :db/id values
       {:query [:components]
        :viewer (resolve-id -10)}
+
       {:components #{{:db/id (resolve-id -1000)}
                      {:db/id (resolve-id -1001)}
                      {:db/id (resolve-id -1002)}
                      {:db/id (resolve-id -1003)}}}
 
-      ;; Query a specific component via a link; it is returned
+      ;; Query a specific component via a ident; it is returned
       ;; only with its :db/id value
       {:query [[:component (resolve-id -1000)]]
        :viewer (resolve-id -10)}
+
       {:component {:db/id (resolve-id -1000)}}
 
       ;; Query for components with a keyword join
       {:query [{:components [:component/name]}]
        :viewer (resolve-id -10)}
-      {:components #{{:component/name "Shop Item"}
-                     {:component/name "Cart Info"}
-                     {:component/name "Dislike Button"}
-                     {:component/name "Like Button"}}}
 
-      ;; Query for a specific component with a link join
+      {:components
+       #{{:db/id (resolve-id -1000) :component/name "Shop Item"}
+         {:db/id (resolve-id -1001) :component/name "Cart Info"}
+         {:db/id (resolve-id -1002) :component/name "Like Button"}
+         {:db/id (resolve-id -1003) :component/name "Dislike Button"}}}
+
+      ;; Query all accounts (implictly including it's :db/id attribute)
+      ;; and all components with their names (and :db/id values)
+      {:query [:accounts {:components [:component/name]}]
+       :viewer (resolve-id -10)}
+
+      {:accounts #{{:db/id (resolve-id -1)}}
+       :components
+       #{{:db/id (resolve-id -1000) :component/name "Shop Item"}
+         {:db/id (resolve-id -1001) :component/name "Cart Info"}
+         {:db/id (resolve-id -1002) :component/name "Like Button"}
+         {:db/id (resolve-id -1003) :component/name "Dislike Button"}}}
+
+      ;; Query for a specific component with a ident join
       {:query [{[:component (resolve-id -1000)]
                 [:db/id :component/name :component/account]}]
        :viewer (resolve-id -10)}
+
       {:component {:db/id (resolve-id -1000)
                    :component/name "Shop Item"
                    :component/account {:db/id (resolve-id -1)}}}
@@ -61,15 +78,18 @@
       {:query [{:components [:component/name]}]
        :viewer (resolve-id -12)
        :empty-cache? true}
-      {:components #{{:component/name "Dislike Button"}
-                     {:component/name "Seat Picker"}}}
 
-      ;; Query for a specific component with a link join
+      {:components
+       #{{:db/id (resolve-id -1003) :component/name "Dislike Button"}
+         {:db/id (resolve-id -1004) :component/name "Seat Picker"}}}
+
+      ;; Query for a specific component with a ident join
       ;; as an unauthorized user
       {:query [{[:component (resolve-id -1000)]
                 [:db/id :component/name :component/account]}]
        :viewer (resolve-id -12)
        :empty-cache? true}
+
       {:component nil}
 
       ;; Query all components and sort by their names using
@@ -77,10 +97,12 @@
       {:query '[({:components [:component/name]}
                  {:sort/attr :component/name})]
        :viewer (resolve-id -10)}
-      {:components [{:component/name "Cart Info"}
-                    {:component/name "Dislike Button"}
-                    {:component/name "Like Button"}
-                    {:component/name "Shop Item"}]}
+
+      {:components
+       [{:db/id (resolve-id -1001) :component/name "Cart Info"}
+        {:db/id (resolve-id -1003) :component/name "Dislike Button"}
+        {:db/id (resolve-id -1002) :component/name "Like Button"}
+        {:db/id (resolve-id -1000) :component/name "Shop Item"}]}
 
       ;; Query all components and sort in reverse order
       ;; by their names using a parameterized query
@@ -88,19 +110,23 @@
                  {:sort/attr :component/name
                   :sort/order :sort/descending})]
        :viewer (resolve-id -10)}
-      {:components [{:component/name "Shop Item"}
-                    {:component/name "Like Button"}
-                    {:component/name "Dislike Button"}
-                    {:component/name "Cart Info"}]}
+
+      {:components
+       [{:db/id (resolve-id -1000) :component/name "Shop Item"}
+        {:db/id (resolve-id -1002) :component/name "Like Button"}
+        {:db/id (resolve-id -1003) :component/name "Dislike Button"}
+        {:db/id (resolve-id -1001) :component/name "Cart Info"}]}
 
       ;; Query for one component and filter by :db/id
       {:query `[(:component {:db/id ~(resolve-id -1000)})]
        :viewer (resolve-id -10)}
+
       {:component {:db/id (resolve-id -1000)}}
 
       ;; Query for all component and filter by :db/id
       {:query `[(:components {:db/id ~(resolve-id -1000)})]
        :viewer (resolve-id -10)}
+
       {:components #{{:db/id (resolve-id -1000)}}}
 
       ;; Query for all components and parameterize the join
@@ -112,21 +138,32 @@
                    {:sort/attr :component-state/name
                     :sort/order :sort/descending})]}]
        :viewer (resolve-id -10)}
+
       {:components
-       #{{:component/name "Dislike Button"
+       #{{:db/id (resolve-id -1003)
+          :component/name "Dislike Button"
           :component/states
-          [{:component-state/name "Dislike Button Regular"}
-           {:component-state/name "Dislike Button Active"}]}
-         {:component/name "Cart Info"
+          [{:db/id (resolve-id -10004)
+            :component-state/name "Dislike Button Regular"}
+           {:db/id (resolve-id -10005)
+            :component-state/name "Dislike Button Active"}]}
+         {:db/id (resolve-id -1001)
+          :component/name "Cart Info"
           :component/states nil}
-         {:component/name "Like Button"
+         {:db/id (resolve-id -1002)
+          :component/name "Like Button"
           :component/states
-          [{:component-state/name "Like Button Regular"}
-           {:component-state/name "Like Button Active"}]}
-         {:component/name "Shop Item"
+          [{:db/id (resolve-id -10002)
+            :component-state/name "Like Button Regular"}
+           {:db/id (resolve-id -10003)
+            :component-state/name "Like Button Active"}]}
+         {:db/id (resolve-id -1000)
+          :component/name "Shop Item"
           :component/states
-          [{:component-state/name "Shop Item Selected"}
-           {:component-state/name "Shop Item Regular"}]}}}
+          [{:db/id (resolve-id -10001)
+            :component-state/name "Shop Item Selected"}
+           {:db/id (resolve-id -10000)
+            :component-state/name "Shop Item Regular"}]}}}
 
       ;; Query for all components and parameterize the join
       ;; with their component states to sort their names
@@ -139,58 +176,90 @@
                  {:sort/attr :component/name
                   :sort/order :sort/descending})]
        :viewer (resolve-id -10)}
+
       {:components
-       [{:component/name "Shop Item"
+       [{:db/id (resolve-id -1000)
+         :component/name "Shop Item"
          :component/states
-         [{:component-state/name "Shop Item Selected"}
-          {:component-state/name "Shop Item Regular"}]}
-        {:component/name "Like Button"
+         [{:db/id (resolve-id -10001)
+           :component-state/name "Shop Item Selected"}
+          {:db/id (resolve-id -10000)
+           :component-state/name "Shop Item Regular"}]}
+        {:db/id (resolve-id -1002)
+         :component/name "Like Button"
          :component/states
-         [{:component-state/name "Like Button Regular"}
-          {:component-state/name "Like Button Active"}]}
-        {:component/name "Dislike Button"
+         [{:db/id (resolve-id -10002)
+           :component-state/name "Like Button Regular"}
+          {:db/id (resolve-id -10003)
+           :component-state/name "Like Button Active"}]}
+        {:db/id (resolve-id -1003)
+         :component/name "Dislike Button"
          :component/states
-         [{:component-state/name "Dislike Button Regular"}
-          {:component-state/name "Dislike Button Active"}]}
-        {:component/name "Cart Info"
+         [{:db/id (resolve-id -10004)
+           :component-state/name "Dislike Button Regular"}
+          {:db/id (resolve-id -10005)
+           :component-state/name "Dislike Button Active"}]}
+        {:db/id (resolve-id -1001)
+         :component/name "Cart Info"
          :component/states nil}]}
 
       ;; Query one component by ID, join in its component states
       ;; and their component (which should be the same component
       ;; again)
-      #_(do
-        (println "---")
-        {:query `[({:component [:component/name
-                                {:component/states
-                                 [:component-state/name
-                                  {:component-state/component
-                                   [:component/name]}]}]}
-                   {:db/id ~(resolve-id -1000)})]
-         :viewer (resolve-id -10)})
-      #_{:component
-       {:component/name "Shop Item"
-        :component/states
-        #{{:component-state/name "Shop Item Regular"
-           :component-state/component
-           {:component/name "Shop Item"}}
-          {:component-state/name "Shop Item Selected"
-           :component-state/component
-           {:component/name "Shop Item"}}}}}
-
-      ;; Query all components with a join and a sub-join for their
-      ;; states' names
-      {:query [{:components
-                [{:component/states
-                  [:component-state/name]}]}]
+      {:query `[({:component [:component/name
+                              {:component/states
+                               [:component-state/name
+                                {:component-state/component
+                                 [:component/name]}]}]}
+                 {:db/id ~(resolve-id -1000)})]
        :viewer (resolve-id -10)}
+
+      {:component
+       {:db/id (resolve-id -1000)
+        :component/name "Shop Item"
+        :component/states
+        #{{:db/id (resolve-id -10000)
+           :component-state/name "Shop Item Regular"
+           :component-state/component
+           {:db/id (resolve-id -1000)
+            :component/name "Shop Item"}}
+          {:db/id (resolve-id -10001)
+           :component-state/name "Shop Item Selected"
+           :component-state/component
+           {:db/id (resolve-id -1000)
+            :component/name "Shop Item"}}}}}
+
+      ;; Query all components plus a specific account and user in each
+      ;; component query via an ident
+      {:query [{:components [[:account (resolve-id -1)]
+                             [:user (resolve-id -10)]]}]
+       :viewer (resolve-id -10)}
+
       {:components
-       #{{:component/states
-          #{{:component-state/name "Shop Item Regular"}
-            {:component-state/name "Shop Item Selected"}}}
-         {:component/states
-          #{{:component-state/name "Like Button Regular"}
-            {:component-state/name "Like Button Active"}}}
-         {:component/states
-          #{{:component-state/name "Dislike Button Regular"}
-            {:component-state/name "Dislike Button Active"}}}
-         {:component/states nil}}})))
+       #{{:db/id (resolve-id -1000)
+          :account {:db/id (resolve-id -1)}
+          :user {:db/id (resolve-id -10)}}
+         {:db/id (resolve-id -1001)
+          :account {:db/id (resolve-id -1)}
+          :user {:db/id (resolve-id -10)}}
+         {:db/id (resolve-id -1002)
+          :account {:db/id (resolve-id -1)}
+          :user {:db/id (resolve-id -10)}}
+         {:db/id (resolve-id -1003)
+          :account {:db/id (resolve-id -1)}
+          :user {:db/id (resolve-id -10)}}}}
+
+      ;; Query a specific component plus a specific account's
+      ;; information via ident joins
+      {:query [{[:component (resolve-id -1000)]
+                [:component/name {[:account (resolve-id -1)]
+                                  [:account/name :account/users]}]}]
+       :viewer (resolve-id -10)}
+
+      {:component
+       {:db/id (resolve-id -1000)
+        :component/name "Shop Item"
+        :account {:db/id (resolve-id -1)
+                  :account/name "Company A"
+                  :account/users [{:db/id (resolve-id -10)}
+                                  {:db/id (resolve-id -11)}]}}})))
