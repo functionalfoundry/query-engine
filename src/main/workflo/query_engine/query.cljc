@@ -16,7 +16,7 @@
       (try (e/resolve-entity (symbol (inflections/singular (name k))))
            (catch #?(:cljs js/Error :clj Exception) e))))
 
-(defn singular? [k]
+(defn singular-key? [k]
   (= (name k) (inflections/singular (name k))))
 
 ;;;; Data fetching
