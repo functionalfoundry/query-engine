@@ -73,9 +73,12 @@
   (zip/up z))
 
 (defn toplevel? [z]
-  (or (nil? (parent-query (parent-query z)))
-      (and (param-expr? (parent-query (parent-query z)))
-           (nil? (parent-query (parent-query parent-query z))))))
+  (let [self? (nil? (parent-query (parent-query z)))
+        parent-param? (param-expr? (parent-query z))
+        parent-toplevel? (nil? (parent-query (parent-query (parent-query z))))]
+    (or self?
+        (and parent-param?
+             parent-toplevel?))))
 
 (defn first-subquery [z]
   (when (query-root? z)
@@ -118,28 +121,59 @@
     (join-expr? z) (query-key (join-source z))
     (param-expr? z) (query-key (param-query z))))
 
+;;;; Data tree navigation
+
+(defn focus-map-key
+  [z key]
+  (loop [subz (zip/down z)]
+    (if (= key (zip/node (zip/down subz)))
+      (zip/right (zip/down subz))
+      (if (zip/right subz)
+        (recur (zip/right subz))
+        nil))))
+
+(defn unfocus-map-key
+  [z]
+  (zip/up (zip/up z)))
+
 ;;;; Query tree processing
 
 (declare process-query-root)
 
 (defn process-keyword [z ctx f ret]
-  (println "KEYWORD")
-  (f ret z ctx))
+  (cond-> ret
+    (toplevel? z) (zip/edit assoc (query-key z) (f nil z ctx))))
 
 (defn process-ident [z ctx f ret]
-  (println "IDENT")
-  (f ret z ctx))
+  (zip/edit ret assoc (query-key z) (f ret z ctx)))
+
+(defn process-join-query [z ctx f ret]
+  (let [entity-or-entities (zip/node ret)]
+    (if (or (nil? entity-or-entities)
+            (empty? entity-or-entities))
+      ret
+      (if ((some-fn vector? set?) entity-or-entities)
+        (if (seq entity-or-entities)
+          (loop [child (zip/down ret)]
+            (let [child' (process-query-root z nil f child)]
+              (if-not (zip/right child')
+                (zip/up child')
+                (recur (zip/right child')))))
+          ret)
+        (process-query-root z nil f ret)))))
 
 (defn process-join [z ctx f ret]
-  (println "JOIN")
-  (let [ret' (f ret z ctx)]
-    (println "RET'" (zip/node ret'))
-    (cond
-      (query-root? (join-query z))
-      (process-query-root (join-query z) ctx f ret')
-
-      ;; TODO: union-expr? + recur-expr?
-      )))
+  (if (toplevel? z)
+    (let [entity-or-entities (f nil z ctx)]
+      (unfocus-map-key
+       (let [data' (-> (zip/edit ret assoc (query-key z) entity-or-entities)
+                       (focus-map-key (query-key z)))]
+         (process-join-query (join-query z) nil f data'))))
+    (let [entity-or-entities (f ret z ctx)]
+      (unfocus-map-key
+       (let [data' (-> (zip/edit ret assoc (query-key z) entity-or-entities)
+                       (focus-map-key (query-key z)))]
+         (process-join-query (join-query z) nil f data'))))))
 
 (defn process-plain-query-expr [z ctx f ret]
   (cond
@@ -148,25 +182,26 @@
     (join-expr? z) (process-join z ctx f ret)))
 
 (defn process-param-expr [z _ f ret]
-  (println "PARAM")
   (let [query (param-query z)
         params (zip/node (param-map z))]
     (process-plain-query-expr query {:params params} f ret)))
 
 (defn process-query-expr [z _ f ret]
-  (println "QUERY")
   (cond
     (plain-query-expr? z) (process-plain-query-expr z nil f ret)
     (param-expr? z) (process-param-expr z nil f ret)))
 
 (defn process-query-root [z _ f ret]
-  (println "QUERY ROOT")
   (loop [ret ret sub-z (first-subquery z)]
     (let [ret' (process-query-expr sub-z nil f ret)]
+      (println "QUERY EXPR" (zip/node sub-z))
+      (println "  <-" (zip/node ret))
+      (println "  ->" (zip/node ret'))
       (if (last-query? sub-z)
         ret'
         (recur ret' (next-query sub-z))))))
 
-(defn process [z f ret]
+(defn process [z f init]
+  (println "---")
   (when (query-root? z)
-    (process-query-root z nil f ret)))
+    (process-query-root z nil f init)))
