@@ -30,6 +30,13 @@
          '[codox.boot :refer [codox]]
          '[environ.boot :refer [environ]])
 
+(task-options!
+ pom {:project +project+
+      :version +version+
+      :description "Workflo query engine"
+      :url "https://github.com/workfloapp/query-engine"
+      :scm {:url "https://github.com/workfloapp/query-engine"}})
+
 (deftask docs
   []
   (comp
@@ -55,3 +62,11 @@
   []
   (comp (dev-env)
         (repl)))
+
+
+(deftask install-local
+  []
+  (comp
+   (pom)
+   (jar)
+   (install)))
