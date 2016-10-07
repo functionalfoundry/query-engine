@@ -51,7 +51,7 @@
          {:db/id (resolve-id -1002) :component/name "Like Button"}
          {:db/id (resolve-id -1003) :component/name "Dislike Button"}}}
 
-      ;; Query all accounts (implictly including it's :db/id attribute)
+      ;; Query all accounts (implictly including its :db/id attribute)
       ;; and all components with their names (and :db/id values)
       {:query [:accounts {:components [:component/name]}]
        :viewer (resolve-id -10)}
