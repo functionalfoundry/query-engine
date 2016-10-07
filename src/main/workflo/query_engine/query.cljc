@@ -49,14 +49,14 @@
                                 nil [] (:params ctx))]
     data))
 
-(defn fetch-ident-data [env _ z ctx]
+(defn fetch-ident-data [env z attrs ctx]
   (let [key (zip/node (qz/ident-name z))
         value (zip/node (qz/ident-value z))
         entity (entity-from-query-key key)
         data (fetch-entity-data env entity true
                                 (when (not= value '_)
                                   value)
-                                [] (:params ctx))]
+                                attrs (:params ctx))]
     data))
 
 (defn fetch-join-data [env parent-data z ctx]
@@ -79,14 +79,7 @@
           data)
 
         (qz/ident-expr? join-source)
-        (let [key (zip/node (qz/ident-name join-source))
-              value (zip/node (qz/ident-value join-source))
-              entity (entity-from-query-key key)
-              data (fetch-entity-data env entity true
-                                      (when (not= value '_)
-                                        value)
-                                      attrs (:params ctx))]
-          data))
+        (fetch-ident-data env join-source attrs ctx))
       (cond
         (keyword? (zip/node join-source))
         (let [key (qz/query-key join-source)
@@ -102,14 +95,7 @@
           data)
 
         (qz/ident-expr? join-source)
-        (let [key (zip/node (qz/ident-name join-source))
-              value (zip/node (qz/ident-value join-source))
-              entity (entity-from-query-key key)
-              data (fetch-entity-data env entity true
-                                      (when (not= value '_)
-                                        value)
-                                      attrs (:params ctx))]
-          data)))))
+        (fetch-ident-data env join-source attrs ctx)))))
 
 ;;;; Query processing
 
@@ -119,7 +105,7 @@
     (fetch-keyword-data env parent-data z ctx)
 
     (qz/ident-expr? z)
-    (fetch-ident-data env parent-data z ctx)
+    (fetch-ident-data env z [] ctx)
 
     (qz/join-expr? z)
     (fetch-join-data env parent-data z ctx)
