@@ -17,12 +17,11 @@
     (are [args result]
         (= result
            (let [{:keys [viewer query empty-cache?]} args]
-             (q/process query {:db (db conn)
-                               :data-layer layer
-                               :cache (if empty-cache?
-                                        (new-cache)
-                                        shared-cache)
-                               :viewer viewer})))
+             (q/process query layer {:db (db conn)
+                                     :cache (if empty-cache?
+                                              (new-cache)
+                                              shared-cache)
+                                     :viewer viewer})))
 
       ;; Query components via a top-level keyword; all
       ;; accessible components are returned with their
