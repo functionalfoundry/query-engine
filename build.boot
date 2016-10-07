@@ -9,6 +9,7 @@
  :dependencies '[;; Boot
                  [adzerk/boot-test "1.1.2"]
                  [boot-environ "1.1.0"]
+                 [boot-codox "0.10.0" :scope "test"]
 
                  ;; Core
                  [org.clojure/clojure "1.9.0-alpha11"]
@@ -27,7 +28,17 @@
                  [datascript "0.15.4" :scope "test"]])
 
 (require '[adzerk.boot-test :refer :all]
+         '[codox.boot :refer [codox]]
          '[environ.boot :refer [environ]])
+
+(deftask docs
+  []
+  (comp
+   (codox :name "workflo/query-engine"
+          :source-paths #{"src/main"}
+          :output-path "docs"
+          :metadata {:doc/format :markdown})
+   (target)))
 
 (deftask dev-env
   []
