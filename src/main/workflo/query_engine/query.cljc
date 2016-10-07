@@ -55,26 +55,26 @@
 ;;;; Query execution
 
 (defn resolve-keyword
+  "Resolves a toplevel keyword query into data."
   [env _ z params]
   (let [key (qz/query-key z)
-        entity (entity-from-query-key key)
-        data (fetch-entity-data env entity
-                                (singular-key? key)
-                                nil [] params)]
-    data))
+        entity (entity-from-query-key key)]
+    (fetch-entity-data env entity
+                       (singular-key? key)
+                       nil [] params)))
 
 (defn resolve-ident
+  "Resolves an ident query into data."
   [env z attrs params]
   (let [key (zip/node (qz/ident-name z))
         value (zip/node (qz/ident-value z))
-        entity (entity-from-query-key key)
-        data (fetch-entity-data env entity true
-                                (when (not= value '_)
-                                  value)
-                                attrs params)]
-    data))
+        entity (entity-from-query-key key)]
+    (fetch-entity-data env entity true
+                       (when (not= value '_) value)
+                       attrs params)))
 
-(defn attrs-from-join-query
+(defn attrs-from-query-root
+  "Extract attributes from a query root expression."
   [z]
   (loop [subz (qz/first-subquery z) attrs []]
     (let [new-attrs (conj attrs (qz/query-key subz))]
@@ -83,6 +83,10 @@
         (recur (qz/next-query subz) new-attrs)))))
 
 (defn resolve-toplevel-join
+  "Resolves a toplevel join query (where no parent entity
+   exists and our convention is to perform the join on
+   all items of an entity (denoted by the query join
+   source key)."
   [env join-source attrs params]
   (let [key (qz/query-key join-source)
         entity (entity-from-query-key key)]
@@ -91,6 +95,8 @@
                        attrs params)))
 
 (defn resolve-nested-join
+  "Resolves a nested join query (starting from a parent entity
+   map) into data."
   [env parent-data join-source join-query attrs params]
   (let [key (qz/query-key join-source)
         entity (target-entity (zip/node parent-data) key)
@@ -102,12 +108,12 @@
     (fetch-entity-data env entity singular? id-or-ids attrs params)))
 
 (defn resolve-join
-  "Resolves a join query into the corresponding data given
-   a parent data node (an entity map) and parameters."
+  "Resolves a join query into data given a parent data node
+   (an entity map) and optional parameters."
   [env parent-data z params]
   (let [join-source (qz/join-source z)
         join-query (qz/join-query z)
-        attrs (attrs-from-join-query join-query)]
+        attrs (attrs-from-query-root join-query)]
     (cond
       (qz/ident-expr? join-source)
       (resolve-ident env join-source attrs params)
@@ -120,8 +126,8 @@
                              attrs params)))))
 
 (defn resolve-query-node
-  "Resolves a query node z into the corresponding data given
-   a parent data node and parameters."
+  "Resolves a query node z into data given a parent data node
+   and optional parameters."
   [env parent-data z params]
   (cond
     (keyword? (zip/node z)) (resolve-keyword env parent-data z params)
