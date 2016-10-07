@@ -140,14 +140,14 @@
 
 (declare process-query-root)
 
-(defn process-keyword [z ctx f ret]
+(defn process-keyword [z params f ret]
   (cond-> ret
-    (toplevel? z) (zip/edit assoc (query-key z) (f nil z ctx))))
+    (toplevel? z) (zip/edit assoc (query-key z) (f nil z params))))
 
-(defn process-ident [z ctx f ret]
-  (zip/edit ret assoc (query-key z) (f ret z ctx)))
+(defn process-ident [z params f ret]
+  (zip/edit ret assoc (query-key z) (f ret z params)))
 
-(defn process-join-query [z ctx f ret]
+(defn process-join-query [z params f ret]
   (let [entity-or-entities (zip/node ret)]
     (if (or (nil? entity-or-entities)
             (empty? entity-or-entities))
@@ -162,29 +162,31 @@
           ret)
         (process-query-root z nil f ret)))))
 
-(defn process-join [z ctx f ret]
+(defn process-join [z params f ret]
   (if (toplevel? z)
-    (let [entity-or-entities (f nil z ctx)]
+    (let [entity-or-entities (f nil z params)]
       (unfocus-map-key
-       (let [data' (-> (zip/edit ret assoc (query-key z) entity-or-entities)
+       (let [data' (-> (zip/edit ret assoc (query-key z)
+                                 entity-or-entities)
                        (focus-map-key (query-key z)))]
          (process-join-query (join-query z) nil f data'))))
-    (let [entity-or-entities (f ret z ctx)]
+    (let [entity-or-entities (f ret z params)]
       (unfocus-map-key
-       (let [data' (-> (zip/edit ret assoc (query-key z) entity-or-entities)
+       (let [data' (-> (zip/edit ret assoc (query-key z)
+                                 entity-or-entities)
                        (focus-map-key (query-key z)))]
          (process-join-query (join-query z) nil f data'))))))
 
-(defn process-plain-query-expr [z ctx f ret]
+(defn process-plain-query-expr [z params f ret]
   (cond
-    (keyword? (zip/node z)) (process-keyword z ctx f ret)
-    (ident-expr? z) (process-ident z ctx f ret)
-    (join-expr? z) (process-join z ctx f ret)))
+    (keyword? (zip/node z)) (process-keyword z params f ret)
+    (ident-expr? z) (process-ident z params f ret)
+    (join-expr? z) (process-join z params f ret)))
 
 (defn process-param-expr [z _ f ret]
   (let [query (param-query z)
         params (zip/node (param-map z))]
-    (process-plain-query-expr query {:params params} f ret)))
+    (process-plain-query-expr query params f ret)))
 
 (defn process-query-expr [z _ f ret]
   (cond
