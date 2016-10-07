@@ -38,7 +38,7 @@
   "Fetches one or more items of an entity from the data layer."
   [env entity singular? id-or-ids attrs params]
   (let [env (select-keys env [:cache :data-layer :db :viewer])
-        attrs (into [:db/id] attrs)]
+        attrs (if (seq attrs) attrs [:db/id])]
     (if singular?
       (if-let [id (or id-or-ids (:db/id params))]
         (data-layer/fetch-one (:data-layer env) env entity
