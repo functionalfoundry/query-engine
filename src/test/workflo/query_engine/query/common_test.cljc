@@ -1,7 +1,7 @@
 (ns workflo.query-engine.query.common-test
   (:require [clojure.test :refer [are]]
             [workflo.macros.entity :as e]
-            [workflo.query-engine.query :as q]))
+            [workflo.query-engine.core :as qe]))
 
 (defn test-process-queries
   [{:keys [connect db data-layer transact resolve-tempid
@@ -17,11 +17,11 @@
     (are [args result]
         (= result
            (let [{:keys [viewer query empty-cache?]} args]
-             (q/process query layer {:db (db conn)
-                                     :cache (if empty-cache?
-                                              (new-cache)
-                                              shared-cache)
-                                     :viewer viewer})))
+             (qe/query query layer {:db (db conn)
+                                    :cache (if empty-cache?
+                                             (new-cache)
+                                             shared-cache)
+                                    :viewer viewer})))
 
       ;; Query components via a top-level keyword; all
       ;; accessible components are returned with their
