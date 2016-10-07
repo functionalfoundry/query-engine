@@ -3,15 +3,18 @@
 
 ;;;; Data zipper
 
-(defn data-zipper []
-  (zip/zipper (some-fn vector? map? set?)
-              seq
-              (fn [node children]
-                (cond
-                  (vector? node) (vec children)
-                  (map? node) (into {} children)
-                  (set? node) (into #{} children)))
-              {}))
+(defn data-zipper
+  ([]
+   (data-zipper {}))
+  ([data]
+   (zip/zipper (some-fn vector? map? set?)
+               seq
+               (fn [node children]
+                 (cond
+                   (vector? node) (vec children)
+                   (map? node) (into {} children)
+                   (set? node) (into #{} children)))
+               data)))
 
 ;;;; Data tree navigation and modification
 
