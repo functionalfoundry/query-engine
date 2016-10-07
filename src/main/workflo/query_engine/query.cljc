@@ -52,12 +52,12 @@
         (data-layer/fetch-all (:data-layer env) env entity
                               params attrs)))))
 
-;;;; Query execution
+;;;; Query processing with data fetching
 
 (defn resolve-keyword
   "Resolves a toplevel keyword query into data."
   [env _ z params]
-  (let [key (qz/query-key z)
+  (let [key (qz/dispatch-key z)
         entity (entity-from-query-key key)]
     (fetch-entity-data env entity
                        (singular-key? key)
@@ -77,7 +77,7 @@
   "Extract attributes from a query root expression."
   [z]
   (loop [subz (qz/first-subquery z) attrs []]
-    (let [new-attrs (conj attrs (qz/query-key subz))]
+    (let [new-attrs (conj attrs (qz/dispatch-key subz))]
       (if (qz/last-query? subz)
         new-attrs
         (recur (qz/next-query subz) new-attrs)))))
@@ -88,7 +88,7 @@
    all items of an entity (denoted by the query join
    source key)."
   [env join-source attrs params]
-  (let [key (qz/query-key join-source)
+  (let [key (qz/dispatch-key join-source)
         entity (entity-from-query-key key)]
     (fetch-entity-data env entity (singular-key? key)
                        (:db/id params)
@@ -98,7 +98,7 @@
   "Resolves a nested join query (starting from a parent entity
    map) into data."
   [env parent-data join-source join-query attrs params]
-  (let [key (qz/query-key join-source)
+  (let [key (qz/dispatch-key join-source)
         entity (target-entity (zip/node parent-data) key)
         id-or-ids (let [ref-or-refs (get (zip/node parent-data) key)]
                     (if (map? ref-or-refs)
@@ -136,7 +136,8 @@
     :else parent-data))
 
 (defn process
-  "Processes an Om Next query given a a data layer."
+  "Processes an Om Next query given a data layer and an environment
+   that is passed on to the data layer later on."
   [query data-layer env]
   (let [env' (assoc env :data-layer data-layer)]
     (zip/node (qz/process (qz/query-zipper query)
