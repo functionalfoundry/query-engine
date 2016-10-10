@@ -4,8 +4,7 @@
 (def +version+ "0.1.0-SNAPSHOT")
 
 (set-env!
- :source-paths #{"src/main"}
- :resource-paths #{"resources"}
+ :resource-paths #{"src/main" "resources"}
  :dependencies '[;; Boot
                  [adzerk/boot-test "1.1.2"]
                  [boot-environ "1.1.0"]
