@@ -46,14 +46,7 @@
   [z]
   (let [expr (zip/node z)]
     (and (map? expr)
-         (= (count expr) 1)
-         (let [source-expr (zip/down (zip/down z))]
-           (or (keyword? (zip/node source-expr))
-               (ident-expr? source-expr)))
-         (let [query-expr (zip/right (zip/down (zip/down z)))]
-           (or (query-root? query-expr)
-               ;; TODO: union-expr? + recur-expr?
-               )))))
+         (= (count expr) 1))))
 
 (defn plain-query-expr?
   "Returns true if z is a plain query expression."
@@ -66,17 +59,14 @@
   "Returns true if z is a parameter map expression."
   [z]
   (let [expr (zip/node z)]
-    (and (map? expr)
-         (every? keyword? (keys expr)))))
+    (map? expr)))
 
 (defn param-expr?
   "Returns true if z is a parameterized query expression."
   [z]
   (let [expr (zip/node z)]
     (and (seq? expr)
-         (= (count expr) 2)
-         (plain-query-expr? (zip/down z))
-         (param-map-expr? (zip/right (zip/down z))))))
+         (= (count expr) 2))))
 
 (defn query-expr?
   "Returns true if z is a query expression."
@@ -118,51 +108,43 @@
 (defn next-query
   "Moves to the next query in a vector of query expressions."
   [z]
-  (when (query-expr? z)
-    (zip/right z)))
+  (zip/right z))
 
 (defn last-query?
   "Returns true if z is the last query expression in a vector
    of query expressions."
   [z]
-  (when (query-expr? z)
-    (nil? (zip/right z))))
+  (nil? (zip/right z)))
 
 (defn join-source
   "Moves to the source of a join expression."
   [z]
-  (if (join-expr? z)
-    (zip/down (zip/down z))))
+  (zip/down (zip/down z)))
 
 (defn join-query
   "Moves to the query of a join expression."
   [z]
-  (if (join-expr? z)
-    (zip/right (zip/down (zip/down z)))))
+  (zip/right (zip/down (zip/down z))))
 
 (defn param-query
   "Moves to the query of a param expression."
   [z]
-  (if (param-expr? z)
-    (zip/down z)))
+  (zip/down z))
 
 (defn param-map
   "Moves to the parameter map of a param expression."
   [z]
-  (if (param-expr? z)
-    (zip/right (zip/down z))))
+  (zip/right (zip/down z)))
 
 (defn ident-name
   "Moves to the name of an ident expression."
   [z]
-  (if (ident-expr? z)
-    (zip/down z)))
+  (zip/down z))
 
 (defn ident-value
   "Moves to the value of an ident expression."
   [z]
-  (if (ident-expr? z)
-    (zip/right (zip/down z))))
+  (zip/right (zip/down z)))
 
 (defn dispatch-key
   "Obtains the key to use for storing the results of processing
