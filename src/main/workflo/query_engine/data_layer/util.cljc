@@ -1,5 +1,6 @@
 (ns workflo.query-engine.data-layer.util
-  (:refer-clojure :exclude [sort]))
+  (:refer-clojure :exclude [sort])
+  (:require [workflo.macros.entity.schema :as es]))
 
 (def ^:private sort-params
   #{:sort/attr :sort/order})
@@ -15,13 +16,20 @@
   (not (some #{k} non-filter-params)))
 
 (defn filter-entity
-  [data params]
-  (if-let [filter-params (seq (filter filter-param? params))]
-    (when (every? (fn [[k v]]
-                    (= (get data k) v))
-                  filter-params)
-      data)
-    data))
+  [data entity params]
+  (let [refs (es/entity-refs entity)]
+    (if-let [filter-params (seq (filter filter-param? params))]
+      (when (every? (fn [[k v]]
+                      (if (get refs k)
+                        (if (:many? (get refs k))
+                          (or (some #{v} (get data k))
+                              (some #{v} (map :db/id (get data k))))
+                          (or (= v (get data k))
+                              (= v (:db/id (get data k)))))
+                        (= (get data k) v)))
+                    filter-params)
+        data)
+      data)))
 
 (defn sort
   [params entities]

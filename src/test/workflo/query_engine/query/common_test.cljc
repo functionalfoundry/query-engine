@@ -237,4 +237,27 @@
        {:component/name "Shop Item"
         :account {:account/name "Company A"
                   :account/users [{:db/id (resolve-id -10)}
-                                  {:db/id (resolve-id -11)}]}}})))
+                                  {:db/id (resolve-id -11)}]}}}
+
+      ;; Query the component that contains a specific
+      ;; component state
+      {:query `[({:component [:component/name :component/states]}
+                 {:component/states ~(resolve-id -10004)})]
+       :viewer (resolve-id -10)}
+
+      {:component
+       {:component/name "Dislike Button"
+        :component/states [{:db/id (resolve-id -10004)}
+                           {:db/id (resolve-id -10005)}]}}
+
+      ;; Query all components that were created by a
+      ;; specific user (the viewer)
+      {:query `[({:components [:component/name :component/creator]}
+                 {:component/creator ~(resolve-id -10)})]
+       :viewer (resolve-id -10)}
+
+      {:components
+       #{{:component/name "Shop Item"
+          :component/creator {:db/id (resolve-id -10)}}
+         {:component/name "Like Button"
+          :component/creator {:db/id (resolve-id -10)}}}})))
