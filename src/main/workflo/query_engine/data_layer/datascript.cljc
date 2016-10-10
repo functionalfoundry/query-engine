@@ -21,10 +21,9 @@
   [{:keys [db cache viewer]} entity id]
   (letfn [(fetch* [id]
             (d/q '[:find (pull ?e [*]) .
-                   :in $ ?e ?entity ?viewer
-                   :where [(workflo.query-engine.data-layer.datascript/authorized?
-                            $ ?entity ?e ?viewer)]]
-                 db id entity viewer))]
+                   :in $ ?e ?entity ?viewer ?authorized
+                   :where [(?authorized $ ?entity ?e ?viewer)]]
+                 db id entity viewer authorized?))]
     (if cache
       (c/get-one cache id fetch*)
       (fetch* id))))
@@ -32,19 +31,18 @@
 (defn- fetch-entities
   ([{:keys [db viewer] :as env} entity]
    (let [ids (d/q '[:find [?e ...]
-                    :in $ [?a ...] ?entity ?viewer
+                    :in $ [?a ...] ?entity ?viewer ?authorized
                     :where [?e ?a]
-                           [(workflo.query-engine.data-layer.datascript/authorized?
-                             $ ?entity ?e ?viewer)]]
-                  db (es/required-keys entity) entity viewer)]
+                           [(?authorized $ ?entity ?e ?viewer)]]
+                  db (es/required-keys entity) entity viewer
+                  authorized?)]
      (fetch-entities env entity ids)))
   ([{:keys [db cache viewer]} entity ids]
    (letfn [(fetch* [ids]
              (d/q '[:find [(pull ?e [*]) ...]
-                    :in $ [?e ...] ?entity ?viewer
-                    :where [(workflo.query-engine.data-layer.datascript/authorized?
-                             $ ?entity ?e ?viewer)]]
-                  db ids entity viewer))]
+                    :in $ [?e ...] ?entity ?viewer ?authorized
+                    :where [(?authorized $ ?entity ?e ?viewer)]]
+                  db ids entity viewer authorized?))]
      (if cache
        (c/get-many cache ids
                    (fn [missing-ids]
