@@ -281,4 +281,14 @@
                                     (map name (zip/node z))))}
        :viewer (resolve-id -10)}
 
-      {:foo {:bar "bar" :baz "baz"}})))
+      {:foo {:bar "bar" :baz "baz"}}
+
+      ;; Query all components with their name and a non-existent
+      ;; attribute that triggers a query hook
+      {:query [{:components [:component/name :extra-info]}]
+       :query-hooks {:extra-info (fn [env parent z params] :foo)}
+       :viewer (resolve-id -12)}
+
+      {:components
+       #{{:component/name "Dislike Button" :extra-info :foo}
+         {:component/name "Seat Picker" :extra-info :foo}}})))
