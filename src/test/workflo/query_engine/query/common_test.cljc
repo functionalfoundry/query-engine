@@ -263,4 +263,11 @@
        #{{:component/name "Shop Item"
           :component/creator {:db/id (resolve-id -10)}}
          {:component/name "Like Button"
-          :component/creator {:db/id (resolve-id -10)}}}})))
+          :component/creator {:db/id (resolve-id -10)}}}}
+
+      ;; Query a key that directly corresponds to a query hook
+      {:query [:foo]
+       :query-hooks {:foo (fn [env parent z params] :bar)}
+       :viewer (resolve-id -10)}
+
+      {:foo :bar})))

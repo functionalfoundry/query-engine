@@ -56,12 +56,15 @@
 (defn resolve-keyword
   "Resolves a toplevel keyword query into data."
   [env opts parent-data z params]
-  (when (qz/toplevel? z)
-    (let [key (qz/dispatch-key z)
-          entity (entity-from-query-key key)]
-      (fetch-entity-data env entity
-                         (singular-key? key)
-                         nil [] params))))
+  (let [key (qz/dispatch-key z)]
+    (if-let [hook (get (:query-hooks opts) key)]
+      (hook env parent-data z params)
+      (when (qz/toplevel? z)
+        (let [key (qz/dispatch-key z)
+              entity (entity-from-query-key key)]
+          (fetch-entity-data env entity
+                             (singular-key? key)
+                             nil [] params))))))
 
 (defn resolve-ident
   "Resolves an ident query into data."
