@@ -306,4 +306,20 @@
        #{{:component/name "Dislike Button"
           :extra-info {:a :foo :b :bar}}
          {:component/name "Seat Picker"
-          :extra-info {:a :foo :b :bar}}}})))
+          :extra-info {:a :foo :b :bar}}}}
+
+      ;; Query components with a join that triggers a hook; verify
+      ;; that if the hook sets the :stop-processing? meta flag, the
+      ;; query isn't processed beyond the hook
+      {:query [{:components [:component/name
+                             {:extra [{:foo :bar}
+                                      {:bar :baz}]}]}]
+       :query-hooks {:extra (fn [env parent z params]
+                              (with-meta
+                                {:a :b}
+                                {:stop-processing? true}))}
+       :viewer (resolve-id -12)}
+
+      {:components
+       #{{:component/name "Dislike Button" :extra {:a :b}}
+         {:component/name "Seat Picker" :extra {:a :b}}}})))

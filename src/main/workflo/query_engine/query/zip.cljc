@@ -215,10 +215,12 @@
    ret)."
   [ret z params f]
   (let [entity-or-entities (f (when-not (toplevel? z) ret) z params)]
-    (dz/goto-parent-map
-     (-> (dz/set-attr ret (dispatch-key z) entity-or-entities)
-         (dz/goto-attr (dispatch-key z))
-         (process-join-query (join-query z) nil f)))))
+    (if (some-> entity-or-entities meta :stop-processing?)
+      (dz/set-attr ret (dispatch-key z) entity-or-entities)
+      (dz/goto-parent-map
+       (-> (dz/set-attr ret (dispatch-key z) entity-or-entities)
+           (dz/goto-attr (dispatch-key z))
+           (process-join-query (join-query z) nil f))))))
 
 (defn process-plain-query-expr
   "Processes a plain query expression."
