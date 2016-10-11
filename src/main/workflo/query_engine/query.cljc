@@ -24,7 +24,13 @@
   [source attr]
   (let [source-entity (:entity (meta source))
         attr-ref (get (es/entity-refs source-entity) attr)]
-    (e/resolve-entity (:entity attr-ref))))
+    (try
+      (e/resolve-entity (:entity attr-ref))
+      (catch #?(:cljs js/Error :clj Exception) e
+        (let [err-msg (str "Failed to resolve entity for attribute "
+                           attr " in data:" source)]
+          (throw #?(:cljs (js/Error. err-msg)
+                    :clj (Exception. err-msg))))))))
 
 (defn singular-key?
   "Returns whether or not a key is singular (e.g. :user,
