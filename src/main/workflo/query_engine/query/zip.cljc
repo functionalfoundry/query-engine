@@ -165,8 +165,12 @@
    as these, by convention, refer to one or many instances of an
    entity type."
   [ret z params f]
-  (cond-> ret
-    (toplevel? z) (zip/edit assoc (dispatch-key z) (f nil z params))))
+  (let [ret' (f nil z params)]
+    (if (toplevel? z)
+      (zip/edit ret assoc (dispatch-key z) ret')
+      (if-not (nil? ret')
+        (zip/edit ret assoc (dispatch-key z) ret')
+        ret))))
 
 (defn process-ident
   "Processes an ident expression. This calls f to obtain a result for

@@ -16,12 +16,15 @@
         shared-cache (new-cache)]
     (are [args result]
         (= result
-           (let [{:keys [viewer query empty-cache?]} args]
-             (qe/query query layer {:db (db conn)
-                                    :cache (if empty-cache?
-                                             (new-cache)
-                                             shared-cache)
-                                    :viewer viewer})))
+           (let [{:keys [viewer query empty-cache?
+                         :query-hooks]} args]
+             (qe/query query layer
+                       {:db (db conn)
+                        :cache (if empty-cache?
+                                 (new-cache)
+                                 shared-cache)
+                        :viewer viewer}
+                       {:query-hooks query-hooks})))
 
       ;; Query components via a top-level keyword; all
       ;; accessible components are returned with their

@@ -55,16 +55,17 @@
 
 (defn resolve-keyword
   "Resolves a toplevel keyword query into data."
-  [env _ z params]
-  (let [key (qz/dispatch-key z)
-        entity (entity-from-query-key key)]
-    (fetch-entity-data env entity
-                       (singular-key? key)
-                       nil [] params)))
+  [env opts parent-data z params]
+  (when (qz/toplevel? z)
+    (let [key (qz/dispatch-key z)
+          entity (entity-from-query-key key)]
+      (fetch-entity-data env entity
+                         (singular-key? key)
+                         nil [] params))))
 
 (defn resolve-ident
   "Resolves an ident query into data."
-  [env z attrs params]
+  [env opts z attrs params]
   (let [key (zip/node (qz/ident-name z))
         value (zip/node (qz/ident-value z))
         entity (entity-from-query-key key)]
@@ -86,9 +87,10 @@
    exists and our convention is to perform the join on
    all items of an entity (denoted by the query join
    source key)."
-  [env join-source attrs params]
+  [env opts join-source join-query params]
   (let [key (qz/dispatch-key join-source)
-        entity (entity-from-query-key key)]
+        entity (entity-from-query-key key)
+        attrs (attrs-from-query-root join-query)]
     (fetch-entity-data env entity (singular-key? key)
                        (:db/id params)
                        attrs params)))
@@ -96,49 +98,63 @@
 (defn resolve-nested-join
   "Resolves a nested join query (starting from a parent entity
    map) into data."
-  [env parent-data join-source join-query attrs params]
+  [env opts parent-data join-source join-query params]
   (let [key (qz/dispatch-key join-source)
         entity (target-entity (zip/node parent-data) key)
         id-or-ids (let [ref-or-refs (get (zip/node parent-data) key)]
                     (if (map? ref-or-refs)
                       (:db/id ref-or-refs)
                       (map :db/id ref-or-refs)))
-        singular? (not (coll? id-or-ids))]
-    (fetch-entity-data env entity singular? id-or-ids attrs params)))
+        singular? (not (coll? id-or-ids))
+        attrs (attrs-from-query-root join-query)]
+    (fetch-entity-data env entity singular? id-or-ids
+                       attrs params)))
 
 (defn resolve-join
   "Resolves a join query into data given a parent data node
    (an entity map) and optional parameters."
-  [env parent-data z params]
+  [env opts parent-data z params]
   (let [join-source (qz/join-source z)
-        join-query (qz/join-query z)
-        attrs (attrs-from-query-root join-query)]
+        join-query (qz/join-query z)]
     (cond
       (qz/ident-expr? join-source)
-      (resolve-ident env join-source attrs params)
+      (let [attrs (attrs-from-query-root join-query)]
+        (resolve-ident env opts join-source attrs params))
 
       (keyword? (zip/node join-source))
       (if-not parent-data
-        (resolve-toplevel-join env join-source attrs params)
-        (resolve-nested-join env parent-data
+        (resolve-toplevel-join env opts
+                               join-source join-query
+                               params)
+        (resolve-nested-join env opts parent-data
                              join-source join-query
-                             attrs params)))))
+                             params)))))
 
 (defn resolve-query-node
   "Resolves a query node z into data given a parent data node
    and optional parameters."
-  [env parent-data z params]
+  [env opts parent-data z params]
   (cond
-    (keyword? (zip/node z)) (resolve-keyword env parent-data z params)
-    (qz/ident-expr? z) (resolve-ident env z [] params)
-    (qz/join-expr? z) (resolve-join env parent-data z params)
-    :else parent-data))
+    (keyword? (zip/node z))
+    (resolve-keyword env opts parent-data z params)
+
+    (qz/ident-expr? z)
+    (resolve-ident env opts z [] params)
+
+    (qz/join-expr? z)
+    (resolve-join env opts parent-data z params)
+
+    :else
+    parent-data))
 
 (defn process
-  "Processes an Om Next query given a data layer and an environment
-   that is passed on to the data layer later on."
-  [query data-layer env]
-  (let [env' (assoc env :data-layer data-layer)]
-    (zip/node (qz/process (qz/query-zipper query)
-                          (partial resolve-query-node env')
-                          (dz/data-zipper)))))
+  "Processes an Om Next query given a data layer, an environment
+   that is passed through to the data layer, and optional
+   processing options."
+  ([query data-layer env]
+   (process query data-layer env {}))
+  ([query data-layer env opts]
+   (let [env' (assoc env :data-layer data-layer)]
+     (zip/node (qz/process (qz/query-zipper query)
+                           (partial resolve-query-node env' opts)
+                           (dz/data-zipper))))))
