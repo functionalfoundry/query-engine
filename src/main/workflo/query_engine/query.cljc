@@ -91,12 +91,14 @@
    all items of an entity (denoted by the query join
    source key)."
   [env opts join-source join-query params]
-  (let [key (qz/dispatch-key join-source)
-        entity (entity-from-query-key key)
-        attrs (attrs-from-query-root join-query)]
-    (fetch-entity-data env entity (singular-key? key)
-                       (:db/id params)
-                       attrs params)))
+  (let [key (qz/dispatch-key join-source)]
+    (if-let [hook (get (:query-hooks opts) key)]
+      (hook env nil join-query params)
+      (let [entity (entity-from-query-key key)
+            attrs (attrs-from-query-root join-query)]
+        (fetch-entity-data env entity (singular-key? key)
+                           (:db/id params)
+                           attrs params)))))
 
 (defn resolve-nested-join
   "Resolves a nested join query (starting from a parent entity

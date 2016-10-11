@@ -1,7 +1,8 @@
 (ns workflo.query-engine.query.common-test
   (:require [clojure.test :refer [are]]
             [workflo.macros.entity :as e]
-            [workflo.query-engine.core :as qe]))
+            [workflo.query-engine.core :as qe]
+            [clojure.zip :as zip]))
 
 (defn test-process-queries
   [{:keys [connect db data-layer transact resolve-tempid
@@ -270,4 +271,14 @@
        :query-hooks {:foo (fn [env parent z params] :bar)}
        :viewer (resolve-id -10)}
 
-      {:foo :bar})))
+      {:foo :bar}
+
+      ;; Query using a top-level join that directly corresponds to
+      ;; a query hook
+      {:query [{:foo [:bar :baz]}]
+       :query-hooks {:foo (fn [env parent z params]
+                            (zipmap (zip/node z)
+                                    (map name (zip/node z))))}
+       :viewer (resolve-id -10)}
+
+      {:foo {:bar "bar" :baz "baz"}})))
