@@ -104,16 +104,18 @@
   "Resolves a nested join query (starting from a parent entity
    map) into data."
   [env opts parent-data join-source join-query params]
-  (let [key (qz/dispatch-key join-source)
-        entity (target-entity (zip/node parent-data) key)
-        id-or-ids (let [ref-or-refs (get (zip/node parent-data) key)]
-                    (if (map? ref-or-refs)
-                      (:db/id ref-or-refs)
-                      (map :db/id ref-or-refs)))
-        singular? (not (coll? id-or-ids))
-        attrs (attrs-from-query-root join-query)]
-    (fetch-entity-data env entity singular? id-or-ids
-                       attrs params)))
+  (let [key (qz/dispatch-key join-source)]
+    (if-let [hook (get (:query-hooks opts) key)]
+      (hook env parent-data join-query params)
+      (let [entity (target-entity (zip/node parent-data) key)
+            id-or-ids (let [ref-or-refs (get (zip/node parent-data) key)]
+                        (if (map? ref-or-refs)
+                          (:db/id ref-or-refs)
+                          (map :db/id ref-or-refs)))
+            singular? (not (coll? id-or-ids))
+            attrs (attrs-from-query-root join-query)]
+        (fetch-entity-data env entity singular? id-or-ids
+                           attrs params)))))
 
 (defn resolve-join
   "Resolves a join query into data given a parent data node

@@ -291,4 +291,19 @@
 
       {:components
        #{{:component/name "Dislike Button" :extra-info :foo}
-         {:component/name "Seat Picker" :extra-info :foo}}})))
+         {:component/name "Seat Picker" :extra-info :foo}}}
+
+      ;; Query all components with their name and a join via
+      ;; a non-existent attribute that triggers a query hook
+      ;; to include arbitrary data in the result
+      {:query [{:components [:component/name
+                             {:extra-info [:a :b]}]}]
+       :query-hooks {:extra-info (fn [env parent z params]
+                                   {:a :foo :b :bar})}
+       :viewer (resolve-id -12)}
+
+      {:components
+       #{{:component/name "Dislike Button"
+          :extra-info {:a :foo :b :bar}}
+         {:component/name "Seat Picker"
+          :extra-info {:a :foo :b :bar}}}})))
