@@ -1,7 +1,8 @@
 (ns workflo.query-engine.query.common-test
   (:require [clojure.test :refer [are]]
             [workflo.macros.entity :as e]
-            [workflo.query-engine.core :as qe]))
+            [workflo.query-engine.core :as qe]
+            [clojure.zip :as zip]))
 
 (defn test-process-queries
   [{:keys [connect db data-layer transact resolve-tempid
@@ -16,12 +17,15 @@
         shared-cache (new-cache)]
     (are [args result]
         (= result
-           (let [{:keys [viewer query empty-cache?]} args]
-             (qe/query query layer {:db (db conn)
-                                    :cache (if empty-cache?
-                                             (new-cache)
-                                             shared-cache)
-                                    :viewer viewer})))
+           (let [{:keys [viewer query empty-cache?
+                         :query-hooks]} args]
+             (qe/query query layer
+                       {:db (db conn)
+                        :cache (if empty-cache?
+                                 (new-cache)
+                                 shared-cache)
+                        :viewer viewer}
+                       {:query-hooks query-hooks})))
 
       ;; Query components via a top-level keyword; all
       ;; accessible components are returned with their
@@ -260,4 +264,62 @@
        #{{:component/name "Shop Item"
           :component/creator {:db/id (resolve-id -10)}}
          {:component/name "Like Button"
-          :component/creator {:db/id (resolve-id -10)}}}})))
+          :component/creator {:db/id (resolve-id -10)}}}}
+
+      ;; Query a key that directly corresponds to a query hook
+      {:query [:foo]
+       :query-hooks {:foo (fn [env parent z params] :bar)}
+       :viewer (resolve-id -10)}
+
+      {:foo :bar}
+
+      ;; Query using a top-level join that directly corresponds to
+      ;; a query hook
+      {:query [{:foo [:bar :baz]}]
+       :query-hooks {:foo (fn [env parent z params]
+                            (zipmap (zip/node z)
+                                    (map name (zip/node z))))}
+       :viewer (resolve-id -10)}
+
+      {:foo {:bar "bar" :baz "baz"}}
+
+      ;; Query all components with their name and a non-existent
+      ;; attribute that triggers a query hook
+      {:query [{:components [:component/name :extra-info]}]
+       :query-hooks {:extra-info (fn [env parent z params] :foo)}
+       :viewer (resolve-id -12)}
+
+      {:components
+       #{{:component/name "Dislike Button" :extra-info :foo}
+         {:component/name "Seat Picker" :extra-info :foo}}}
+
+      ;; Query all components with their name and a join via
+      ;; a non-existent attribute that triggers a query hook
+      ;; to include arbitrary data in the result
+      {:query [{:components [:component/name
+                             {:extra-info [:a :b]}]}]
+       :query-hooks {:extra-info (fn [env parent z params]
+                                   {:a :foo :b :bar})}
+       :viewer (resolve-id -12)}
+
+      {:components
+       #{{:component/name "Dislike Button"
+          :extra-info {:a :foo :b :bar}}
+         {:component/name "Seat Picker"
+          :extra-info {:a :foo :b :bar}}}}
+
+      ;; Query components with a join that triggers a hook; verify
+      ;; that if the hook sets the :stop-processing? meta flag, the
+      ;; query isn't processed beyond the hook
+      {:query [{:components [:component/name
+                             {:extra [{:foo :bar}
+                                      {:bar :baz}]}]}]
+       :query-hooks {:extra (fn [env parent z params]
+                              (with-meta
+                                {:a :b}
+                                {:stop-processing? true}))}
+       :viewer (resolve-id -12)}
+
+      {:components
+       #{{:component/name "Dislike Button" :extra {:a :b}}
+         {:component/name "Seat Picker" :extra {:a :b}}}})))

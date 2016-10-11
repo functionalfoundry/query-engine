@@ -165,8 +165,12 @@
    as these, by convention, refer to one or many instances of an
    entity type."
   [ret z params f]
-  (cond-> ret
-    (toplevel? z) (zip/edit assoc (dispatch-key z) (f nil z params))))
+  (let [ret' (f nil z params)]
+    (if (toplevel? z)
+      (zip/edit ret assoc (dispatch-key z) ret')
+      (if-not (nil? ret')
+        (zip/edit ret assoc (dispatch-key z) ret')
+        ret))))
 
 (defn process-ident
   "Processes an ident expression. This calls f to obtain a result for
@@ -211,10 +215,12 @@
    ret)."
   [ret z params f]
   (let [entity-or-entities (f (when-not (toplevel? z) ret) z params)]
-    (dz/goto-parent-map
-     (-> (dz/set-attr ret (dispatch-key z) entity-or-entities)
-         (dz/goto-attr (dispatch-key z))
-         (process-join-query (join-query z) nil f)))))
+    (if (some-> entity-or-entities meta :stop-processing?)
+      (dz/set-attr ret (dispatch-key z) entity-or-entities)
+      (dz/goto-parent-map
+       (-> (dz/set-attr ret (dispatch-key z) entity-or-entities)
+           (dz/goto-attr (dispatch-key z))
+           (process-join-query (join-query z) nil f))))))
 
 (defn process-plain-query-expr
   "Processes a plain query expression."
