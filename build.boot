@@ -11,6 +11,7 @@
 
 (set-env!
  :resource-paths #{"src/main" "resources"}
+ :repositories #(concat % +repositories+)
  :dependencies '[;; Boot
                  [adzerk/boot-test "1.1.2"]
                  [adzerk/bootlaces "0.1.13"]
