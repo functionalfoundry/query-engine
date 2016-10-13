@@ -38,6 +38,8 @@
          '[codox.boot :refer [codox]]
          '[environ.boot :refer [environ]])
 
+(bootlaces! +version+ :dont-modify-paths? true)
+
 (task-options!
  push {:repo "workflo-private"
        :ensure-branch "master"
