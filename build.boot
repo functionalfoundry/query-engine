@@ -3,10 +3,17 @@
 (def +project+ 'workflo/query-engine)
 (def +version+ "0.1.0-SNAPSHOT")
 
+(def +repositories+
+  [["workflo-private"
+    {:url "https://workflo.jfrog.io/workflo/workflo-private"
+     :username "boot"
+     :password "[Kabc$?L~TMW"}]])
+
 (set-env!
  :resource-paths #{"src/main" "resources"}
  :dependencies '[;; Boot
                  [adzerk/boot-test "1.1.2"]
+                 [adzerk/bootlaces "0.1.13"]
                  [boot-environ "1.1.0"]
                  [boot-codox "0.10.0" :scope "test"]
 
@@ -26,10 +33,17 @@
                  [datascript "0.15.4" :scope "test"]])
 
 (require '[adzerk.boot-test :refer :all]
+         '[adzerk.bootlaces :refer :all]
+         '[boot.git :refer [last-commit]]
          '[codox.boot :refer [codox]]
          '[environ.boot :refer [environ]])
 
 (task-options!
+ push {:repo "workflo-private"
+       :ensure-branch "master"
+       :ensure-clean true
+       :ensure-tag (last-commit)
+       :ensure-version +version+}
  pom {:project +project+
       :version +version+
       :description "Workflo query engine"
@@ -62,10 +76,25 @@
   (comp (dev-env)
         (repl)))
 
-
-(deftask install-local
+(deftask deploy-local
   []
   (comp
    (pom)
    (jar)
    (install)))
+
+(deftask deploy-snapshot
+  []
+  (comp
+   (pom)
+   (jar)
+   (build-jar)
+   (push-snapshot)))
+
+(deftask deploy-release
+  []
+  (comp
+   (pom
+    (jar)
+    (build-jar)
+    (push-release))))
