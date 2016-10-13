@@ -92,7 +92,6 @@
    (pom)
    (jar)
    (build-jar)
-   (target)
    (push-snapshot)))
 
 (deftask deploy-release
@@ -101,5 +100,4 @@
    (pom
     (jar)
     (build-jar)
-    (target)
     (push-release))))
