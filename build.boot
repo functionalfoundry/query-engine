@@ -5,16 +5,13 @@
 
 (def +repositories+
   [["workflo-private"
-    {:url "https://workflo.jfrog.io/workflo/workflo-private"
-     :username "boot"
-     :password "[Kabc$?L~TMW"}]])
+    {:url "https://workflo.jfrog.io/workflo/workflo-private"}]])
 
 (set-env!
  :resource-paths #{"src/main" "resources"}
  :repositories #(concat % +repositories+)
  :dependencies '[;; Boot
                  [adzerk/boot-test "1.1.2"]
-                 [adzerk/bootlaces "0.1.13"]
                  [boot-environ "1.1.0"]
                  [boot-codox "0.10.0" :scope "test"]
 
@@ -25,42 +22,34 @@
                  ;; General
                  [inflections "0.12.2"]
                  [environ "1.1.0"]
-                 [workflo/macros "0.2.16"]
 
                  ;; Data layers
-                 [com.datomic/datomic-free "0.9.5394" :scope "test"
+                 [com.datomic/datomic-free "0.9.5394"
+                  :scope "test"
                   :exclusions [com.google.guava/guava]]
                  [datomic-schema "1.3.0"]
-                 [datascript "0.15.4" :scope "test"]])
+                 [datascript "0.15.4" :scope "test"]
+
+                 ;; Workflo
+                 [workflo/boot-workflo "0.1.0-SNAPSHOT"]
+                 [workflo/macros "0.2.16"]])
 
 (require '[adzerk.boot-test :refer :all]
-         '[adzerk.bootlaces :refer :all]
-         '[boot.git :refer [last-commit]]
          '[codox.boot :refer [codox]]
-         '[environ.boot :refer [environ]])
+         '[environ.boot :refer [environ]]
+         '[workflo.boot-workflo :refer :all])
 
-(bootlaces! +version+ :dont-modify-paths? true)
+(workflo-setup!
+ :project +project+
+ :version +version+
+ :module? false
+ :uberjar? false
+ :push-repo "workflo-private")
 
 (task-options!
- push {:repo "workflo-private"
-       :ensure-branch "master"
-       :ensure-clean true
-       :ensure-tag (last-commit)
-       :ensure-version +version+}
- pom {:project +project+
-      :version +version+
-      :description "Workflo query engine"
+ pom {:description "Workflo query engine"
       :url "https://github.com/workfloapp/query-engine"
       :scm {:url "https://github.com/workfloapp/query-engine"}})
-
-(deftask docs
-  []
-  (comp
-   (codox :name "workflo/query-engine"
-          :source-paths #{"src/main"}
-          :output-path "docs"
-          :metadata {:doc/format :markdown})
-   (target)))
 
 (deftask dev-env
   []
@@ -78,24 +67,3 @@
   []
   (comp (dev-env)
         (repl)))
-
-(deftask deploy-local
-  []
-  (comp
-   (pom)
-   (jar)
-   (install)))
-
-(deftask deploy-snapshot
-  []
-  (comp
-   (pom)
-   (jar)
-   (push-snapshot)))
-
-(deftask deploy-release
-  []
-  (comp
-   (pom)
-   (jar)
-   (push-release)))
