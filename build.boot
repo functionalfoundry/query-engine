@@ -5,7 +5,9 @@
 
 (def +repositories+
   [["workflo-private"
-    {:url "https://workflo.jfrog.io/workflo/workflo-private"}]])
+    {:url "https://workflo.jfrog.io/workflo/workflo-private"
+     :username (System/getenv "WORKFLO_REPOSITORIES_USERNAME")
+     :password (System/getenv "WORKFLO_REPOSITORIES_PASSWORD")}]])
 
 (set-env!
  :resource-paths #{"src/main" "resources"}
