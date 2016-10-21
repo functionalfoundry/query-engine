@@ -29,15 +29,14 @@
                  [com.datomic/datomic-free "0.9.5394"
                   :scope "test"
                   :exclusions [com.google.guava/guava]]
-                 [datomic-schema "1.3.0"]
+                 [datomic-schema "1.3.0" :scope "test"]
                  [datascript "0.15.4" :scope "test"]
 
                  ;; Workflo
-                 [workflo/boot-workflo "0.1.0-SNAPSHOT"]
-                 [workflo/macros "0.2.16"]])
+                 [workflo/boot-workflo "0.1.1"]
+                 [workflo/macros "0.2.20"]])
 
 (require '[adzerk.boot-test :refer :all]
-         '[codox.boot :refer [codox]]
          '[environ.boot :refer [environ]]
          '[workflo.boot-workflo :refer :all])
 
