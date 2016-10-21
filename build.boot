@@ -36,7 +36,7 @@
                  [workflo/boot-workflo "0.1.1"]
                  [workflo/macros "0.2.20"]])
 
-(require '[adzerk.boot-test :refer :all]
+(require '[adzerk.boot-test :as boot-test]
          '[environ.boot :refer [environ]]
          '[workflo.boot-workflo :refer :all])
 
@@ -58,11 +58,15 @@
 
 (deftask test-env
   []
-  (comp
-   (environ :env {:datomic-uri "datomic:mem://workflo-query-engine"})
-   (with-pre-wrap fileset
-     (merge-env! :source-paths #{"src/test"})
-     fileset)))
+  (comp (dev-env)
+        (with-pre-wrap fileset
+          (merge-env! :source-paths #{"src/test"})
+          fileset)))
+
+(deftask test
+  []
+  (comp (test-env)
+        (boot-test/test)))
 
 (deftask dev
   []
