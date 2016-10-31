@@ -1,7 +1,7 @@
 #!/usr/bin/env boot
 
 (def +project+ 'workflo/query-engine)
-(def +version+ "0.1.0")
+(def +version+ "0.1.1")
 
 (def +repositories+
   [["workflo-private"
@@ -13,28 +13,28 @@
  :resource-paths #{"src/main" "resources"}
  :repositories #(concat % +repositories+)
  :dependencies '[;; Boot
-                 [adzerk/boot-test "1.1.2"]
-                 [boot-environ "1.1.0"]
-                 [boot-codox "0.10.0" :scope "test"]
+                 [adzerk/boot-test "1.1.2" :scope "test"]
+                 [boot-environ "1.1.0" :scope "test"]
+                 [boot-codox "0.10.1" :scope "test"]
 
                  ;; Core
                  [org.clojure/clojure "1.9.0-alpha11"]
-                 [org.clojure/clojurescript "1.9.229"]
+                 [org.clojure/clojurescript "1.9.293"]
 
                  ;; General
                  [inflections "0.12.2"]
                  [environ "1.1.0"]
 
                  ;; Data layers
-                 [com.datomic/datomic-free "0.9.5394"
-                  :scope "test"
-                  :exclusions [com.google.guava/guava]]
+                 [com.datomic/datomic-free "0.9.5407"
+                  :exclusions [com.google.guava/guava]
+                  :scope "test"]
                  [datomic-schema "1.3.0" :scope "test"]
                  [datascript "0.15.4" :scope "test"]
 
                  ;; Workflo
-                 [workflo/boot-workflo "0.1.1"]
-                 [workflo/macros "0.2.20"]])
+                 [workflo/boot-workflo "0.1.2"]
+                 [workflo/macros "0.2.22"]])
 
 (require '[adzerk.boot-test :as boot-test]
          '[environ.boot :refer [environ]]
