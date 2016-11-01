@@ -33,18 +33,17 @@
                  [datascript "0.15.4" :scope "test"]
 
                  ;; Workflo
-                 [workflo/boot-workflo "0.1.2"]
+                 [workflo/boot-tasks "0.1.3"]
                  [workflo/macros "0.2.22"]])
 
 (require '[adzerk.boot-test :as boot-test]
          '[environ.boot :refer [environ]]
-         '[workflo.boot-workflo :refer :all])
+         '[workflo.boot-tasks :refer :all])
 
 (workflo-setup!
  :project +project+
  :version +version+
- :module? false
- :uberjar? false
+ :library true
  :push-repo "workflo-private")
 
 (task-options!
