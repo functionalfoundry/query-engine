@@ -32,12 +32,16 @@
 (defn- fetch-entities
   ([{:keys [db viewer] :as env} entity]
    (let [req-attrs (remove #{:db/id} (es/required-keys entity))
+         rules     [(into '[(has-entity-attrs? ?e)]
+                          (mapv (fn [attr] ['?e attr])
+                                req-attrs))]
          ids (d/q '[:find [?e ...]
-                    :in $ [?a ...] ?entity ?viewer
+                    :in $ [?a ...] ?entity ?viewer %
                     :where [?e ?a]
+                           (has-entity-attrs? ?e)
                            [(workflo.query-engine.data-layer.datomic/authorized?
                              $ ?entity ?e ?viewer)]]
-                  db req-attrs entity viewer)]
+                  db req-attrs entity viewer rules)]
      (fetch-entities env entity ids)))
   ([{:keys [db cache viewer]} entity ids]
    (letfn [(fetch* [ids]

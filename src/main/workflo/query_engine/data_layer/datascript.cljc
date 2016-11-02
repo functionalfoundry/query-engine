@@ -30,12 +30,17 @@
 
 (defn- fetch-entities
   ([{:keys [db viewer] :as env} entity]
-   (let [ids (d/q '[:find [?e ...]
-                    :in $ [?a ...] ?entity ?viewer ?authorized
+   (let [req-attrs (remove #{:db/id} (es/required-keys entity))
+         rules     [(into '[(has-entity-attrs? ?e)]
+                          (mapv (fn [attr] ['?e attr])
+                                req-attrs))]
+         ids (d/q '[:find [?e ...]
+                    :in $ [?a ...] ?entity ?viewer ?authorized %
                     :where [?e ?a]
+                           (has-entity-attrs? ?e)
                            [(?authorized $ ?entity ?e ?viewer)]]
                   db (es/required-keys entity) entity viewer
-                  authorized?)]
+                  authorized? rules)]
      (fetch-entities env entity ids)))
   ([{:keys [db cache viewer]} entity ids]
    (letfn [(fetch* [ids]
