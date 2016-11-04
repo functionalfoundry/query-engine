@@ -1,7 +1,7 @@
 #!/usr/bin/env boot
 
 (def +project+ 'workflo/query-engine)
-(def +version+ "0.1.3")
+(def +version+ "0.1.4")
 
 (def +repositories+
   [["workflo-private"
