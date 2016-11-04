@@ -13,6 +13,7 @@
  :resource-paths #{"src/main" "resources"}
  :repositories #(concat % +repositories+)
  :dependencies '[;; Boot
+                 [adzerk/boot-cljs "1.7.228-2" :scope "test"]
                  [adzerk/boot-test "1.1.2" :scope "test"]
                  [boot-environ "1.1.0" :scope "test"]
                  [boot-codox "0.10.1" :scope "test"]
@@ -33,8 +34,8 @@
                  [datascript "0.15.4" :scope "test"]
 
                  ;; Workflo
-                 [workflo/boot-tasks "0.1.3"]
-                 [workflo/macros "0.2.22"]])
+                 [workflo/boot-tasks "0.1.7" :scope "test"]
+                 [workflo/macros "0.2.23"]])
 
 (require '[adzerk.boot-test :as boot-test]
          '[environ.boot :refer [environ]]
