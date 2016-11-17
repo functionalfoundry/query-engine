@@ -9,13 +9,21 @@
 
 ;;;; Working with entities
 
+(defn qualified-name
+  [sym-or-kw]
+  (let [ns (namespace sym-or-kw)
+        nm (name sym-or-kw)]
+    (cond->> nm
+      ns (str ns "/"))))
+
 (defn entity-from-query-key
   "Takes a query key (e.g. :users or :user) and resolves it
    it into the corresponding entity definition."
   [k]
-  (or (try (e/resolve-entity (symbol (name k)))
+  (or (try (e/resolve-entity (symbol (qualified-name k)))
            (catch #?(:cljs js/Error :clj Exception) e))
-      (try (e/resolve-entity (symbol (inflections/singular (name k))))
+      (try (e/resolve-entity (symbol (-> (qualified-name k)
+                                         (inflections/singular))))
            (catch #?(:cljs js/Error :clj Exception) e))))
 
 (defn target-entity
@@ -36,7 +44,8 @@
   "Returns whether or not a key is singular (e.g. :user,
    not :users)."
   [k]
-  (= (name k) (inflections/singular (name k))))
+  (= (qualified-name k)
+     (inflections/singular (qualified-name k))))
 
 ;;;; Data fetching
 
