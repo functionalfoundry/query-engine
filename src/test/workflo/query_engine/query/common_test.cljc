@@ -47,6 +47,19 @@
 
       {:component {:db/id (resolve-id -1000)}}
 
+      ;; Query an account with no library references and verify
+      ;; that an empty set of references is returned rather than
+      ;; nil
+      {:query [{[:account (resolve-id -3)]
+                [:account/name
+                 {:account/users [:db/id]}
+                 {:account/libraries [:db/id]}]}]
+       :viewer (resolve-id -13)}
+
+      {:account {:account/name "Company C"
+                 :account/users #{{:db/id (resolve-id -13)}}
+                 :account/libraries #{}}}
+
       ;; Query for components with a keyword join
       {:query [{:components [:component/name]}]
        :viewer (resolve-id -10)}
@@ -150,7 +163,7 @@
           [{:component-state/name "Dislike Button Regular"}
            {:component-state/name "Dislike Button Active"}]}
          {:component/name "Cart Info"
-          :component/states nil}
+          :component/states #{}}
          {:component/name "Like Button"
           :component/states
           [{:component-state/name "Like Button Regular"}
@@ -186,7 +199,7 @@
          [{:component-state/name "Dislike Button Regular"}
           {:component-state/name "Dislike Button Active"}]}
         {:component/name "Cart Info"
-         :component/states nil}]}
+         :component/states #{}}]}
 
       ;; Query one component by ID, join in its component states
       ;; and their component (which should be the same component

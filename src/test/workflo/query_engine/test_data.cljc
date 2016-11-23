@@ -11,7 +11,10 @@
    {:db/id -2
     :account/name "Company B"
     :account/users [-12]
-    :account/libraries [-102]}])
+    :account/libraries [-102]}
+   {:db/id -3
+    :account/name "Company C"
+    :account/users [-13]}])
 
 ;;;; Users
 
@@ -30,7 +33,12 @@
     :user/name "Linda"
     :user/email "linda@email.com"
     :user/password "mnopqr"
-    :user/account -2}])
+    :user/account -2}
+   {:db/id -13
+    :user/name "Ada"
+    :user/email "ada@email.com"
+    :user/password "8dgfog"
+    :user/account -3}])
 
 ;;;; Component libraries
 

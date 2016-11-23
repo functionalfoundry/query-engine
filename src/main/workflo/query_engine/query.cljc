@@ -61,8 +61,10 @@
         (first (data-layer/fetch-all (:data-layer env) env entity
                                      params attrs)))
       (if id-or-ids
-        (data-layer/fetch-many (:data-layer env) env entity
-                               id-or-ids params attrs)
+        (if (seq id-or-ids)
+          (data-layer/fetch-many (:data-layer env) env entity
+                                 id-or-ids params attrs)
+          #{})
         (data-layer/fetch-all (:data-layer env) env entity
                               params attrs)))))
 
