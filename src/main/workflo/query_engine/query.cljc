@@ -1,8 +1,8 @@
 (ns workflo.query-engine.query
-  (:require [clojure.zip :as zip]
+  (:require [clojure.string :as string]
+            [clojure.zip :as zip]
             [inflections.core :as inflections]
             [workflo.macros.entity :as e]
-            [workflo.macros.entity.schema :as es]
             [workflo.query-engine.data-layer :as data-layer]
             [workflo.query-engine.query.data-zip :as dz]
             [workflo.query-engine.query.zip :as qz]))
@@ -26,19 +26,52 @@
                                          (inflections/singular))))
            (catch #?(:cljs js/Error :clj Exception) e))))
 
+(defn ref-entity
+  [source attr attr-ref]
+  (try
+    (e/resolve-entity (:entity attr-ref))
+    (catch #?(:cljs js/Error :clj Exception) e
+        (let [err-msg (str "Failed to resolve entity for attribute "
+                           attr " in data: " source)]
+          (throw #?(:cljs (js/Error. err-msg)
+                    :clj (Exception. err-msg)))))))
+
+(defn backref-attr?
+  "Returns whether or not a key represents a backref (e.g.
+   :account/_users). Backrefs require a namespace (to denote
+   the target entity of the backref) and a leading _ in the
+   name part of the key."
+  [k]
+  (let [ns (namespace k)
+        nm (name k)]
+    (and ns (string/starts-with? nm "_"))))
+
+(defn backref-attr->attr
+  [k]
+  (let [ns (namespace k)
+        nm (name k)]
+    (keyword ns (subs nm 1))))
+
+(defn backref
+  "Returns the target entity definition, the forward ref attribute
+   name and the cardinality of the backref for a source entity and
+   a backref attribute."
+  [source attr]
+  (let [source-entity (:entity (meta source))
+        forward-attr  (backref-attr->attr attr)
+        attr-ref      (get (e/entity-backrefs (:name source-entity)) forward-attr)
+        entity        (ref-entity source attr attr-ref)]
+    {:entity entity
+     :forward-attr forward-attr
+     :many? (:many? attr-ref)}))
+
 (defn target-entity
   "Returns the target entity definition for a source entity and
    a ref attribute."
   [source attr]
   (let [source-entity (:entity (meta source))
-        attr-ref (get (es/entity-refs source-entity) attr)]
-    (try
-      (e/resolve-entity (:entity attr-ref))
-      (catch #?(:cljs js/Error :clj Exception) e
-        (let [err-msg (str "Failed to resolve entity for attribute "
-                           attr " in data:" source)]
-          (throw #?(:cljs (js/Error. err-msg)
-                    :clj (Exception. err-msg))))))))
+        attr-ref (get (e/entity-refs (:name source-entity)) attr)]
+    (ref-entity source attr attr-ref)))
 
 (defn singular-key?
   "Returns whether or not a key is singular (e.g. :user,
@@ -124,15 +157,28 @@
   (let [key (qz/dispatch-key join-source)]
     (if-let [hook (get (:query-hooks opts) key)]
       (hook env parent-data join-query params)
-      (let [entity (target-entity (zip/node parent-data) key)
-            id-or-ids (let [ref-or-refs (get (zip/node parent-data) key)]
-                        (if (map? ref-or-refs)
-                          (:db/id ref-or-refs)
-                          (map :db/id ref-or-refs)))
-            singular? (not (coll? id-or-ids))
-            attrs (attrs-from-query-root join-query)]
-        (fetch-entity-data env entity singular? id-or-ids
-                           attrs params)))))
+      (if (backref-attr? key)
+        (do
+          (assert (not (nil? (:db/id (zip/node parent-data))))
+                  (str "Cannot query backref " key " without "
+                       "a :db/id in parent data: "
+                       (zip/node parent-data)))
+          (let [backref   (backref (zip/node parent-data) key)
+                parent-id (:db/id (zip/node parent-data))
+                params    (assoc params (:forward-attr backref) parent-id)
+                singular? (not (:many? backref))
+                attrs     (attrs-from-query-root join-query)]
+            (fetch-entity-data env (:entity backref) singular? nil
+                               attrs params)))
+        (let [entity (target-entity (zip/node parent-data) key)
+              id-or-ids (let [ref-or-refs (get (zip/node parent-data) key)]
+                          (if (map? ref-or-refs)
+                            (:db/id ref-or-refs)
+                            (map :db/id ref-or-refs)))
+              singular? (not (coll? id-or-ids))
+              attrs (attrs-from-query-root join-query)]
+          (fetch-entity-data env entity singular? id-or-ids
+                             attrs params))))))
 
 (defn resolve-join
   "Resolves a join query into data given a parent data node
