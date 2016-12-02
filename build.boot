@@ -10,7 +10,7 @@
      :password (System/getenv "WORKFLO_REPOSITORIES_PASSWORD")}]])
 
 (set-env!
- :resource-paths #{"src/main" "resources"}
+ :resource-paths #{"src/main"}
  :repositories #(concat % +repositories+)
  :dependencies '[;; Boot
                  [adzerk/boot-cljs "1.7.228-2" :scope "test"]
