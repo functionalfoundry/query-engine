@@ -378,4 +378,24 @@
           :component/name "Dislike Button"
           :component-state/_component
           #{{:component-state/name "Dislike Button Regular"}
-            {:component-state/name "Dislike Button Active"}}}}})))
+            {:component-state/name "Dislike Button Active"}}}}}
+
+      ;; Query with two joins at the same level - this triggers a bug
+      ;; where zip/up (or something else) drops the meta data on the
+      ;; parent entity when returning from processing the join
+      ;; (see meta-before workaround in query.zip/process-join)
+      {:query [{:accounts [:account/name
+                           {:account/users [:user/name
+                                            {:user/account [:account/name]}]}
+                           {:account/libraries [:component-library/name]}]}]
+       :viewer (resolve-id -10)}
+      {:accounts
+       #{{:account/name "Company A"
+          :account/users
+          #{{:user/name "Joe"
+             :user/account {:account/name "Company A"}}
+            {:user/name "Jeff"
+             :user/account {:account/name "Company A"}}}
+          :account/libraries
+          #{{:component-library/name "Shop Components"}
+            {:component-library/name "Social Network Components"}}}}})))
