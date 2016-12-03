@@ -1,5 +1,6 @@
 (ns workflo.query-engine.query.zip
   (:require [clojure.zip :as zip]
+            [workflo.macros.query.util :as query.util]
             [workflo.query-engine.query.data-zip :as dz]))
 
 ;;;; Forward declarations
@@ -214,13 +215,20 @@
    many instances of an entity (pointed to by the data zipper
    ret)."
   [ret z params f]
-  (let [entity-or-entities (f (when-not (toplevel? z) ret) z params)]
+  (let [entity-or-entities (f (when-not (toplevel? z) ret) z params)
+        singular-backref?  (let [key (dispatch-key z)]
+                             (and (query.util/backref-attr? key)
+                                  (query.util/singular-backref-attr? key)))]
     (if (some-> entity-or-entities meta :stop-processing?)
-      (dz/set-attr ret (dispatch-key z) entity-or-entities)
+      (dz/set-attr ret (dispatch-key z)
+                   (cond-> entity-or-entities
+                     singular-backref? first))
       (do
         (let [meta-before (meta (zip/node ret))]
           (zip/edit (dz/goto-parent-map
-                     (-> (dz/set-attr ret (dispatch-key z) entity-or-entities)
+                     (-> (dz/set-attr ret (dispatch-key z)
+                                      (cond-> entity-or-entities
+                                        singular-backref? first))
                          (dz/goto-attr (dispatch-key z))
                          (process-join-query (join-query z) nil f)))
                     with-meta meta-before))))))
