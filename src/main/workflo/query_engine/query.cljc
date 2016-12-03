@@ -3,6 +3,7 @@
             [clojure.zip :as zip]
             [inflections.core :as inflections]
             [workflo.macros.entity :as e]
+            [workflo.macros.query.util :as query.util]
             [workflo.query-engine.data-layer :as data-layer]
             [workflo.query-engine.query.data-zip :as dz]
             [workflo.query-engine.query.zip :as qz]))
@@ -36,21 +37,13 @@
           (throw #?(:cljs (js/Error. err-msg)
                     :clj (Exception. err-msg)))))))
 
-(defn backref-attr?
-  "Returns whether or not a key represents a backref (e.g.
-   :account/_users). Backrefs require a namespace (to denote
-   the target entity of the backref) and a leading _ in the
-   name part of the key."
+(defn backref-attr->forward-attrs
   [k]
+  {:pre [(query.util/backref-attr? k)]}
   (let [ns (namespace k)
         nm (name k)]
-    (and ns (string/starts-with? nm "_"))))
-
-(defn backref-attr->attr
-  [k]
-  (let [ns (namespace k)
-        nm (name k)]
-    (keyword ns (subs nm 1))))
+    [(keyword ns (subs nm 1))
+     (keyword (inflections/singular ns) (subs nm 1))]))
 
 (defn backref
   "Returns the target entity definition, the forward ref attribute
@@ -58,12 +51,17 @@
    a backref attribute."
   [source attr]
   (let [source-entity (:entity (meta source))
-        forward-attr  (backref-attr->attr attr)
-        attr-ref      (get (e/entity-backrefs (:name source-entity)) forward-attr)
-        entity        (ref-entity source attr attr-ref)]
+        forward-attrs (backref-attr->forward-attrs attr)
+        attr-refs     (zipmap forward-attrs
+                              (map (fn [forward-attr]
+                                     (get (e/entity-backrefs (:name source-entity))
+                                          forward-attr))
+                                   forward-attrs))
+        attr-ref      (first (filter (comp (complement nil?) second) attr-refs))
+        entity        (ref-entity source attr (second attr-ref))]
     {:entity entity
-     :forward-attr forward-attr
-     :many? (:many? attr-ref)}))
+     :forward-attr (first attr-ref)
+     :many? (:many? (second attr-ref))}))
 
 (defn target-entity
   "Returns the target entity definition for a source entity and
@@ -157,7 +155,7 @@
   (let [key (qz/dispatch-key join-source)]
     (if-let [hook (get (:query-hooks opts) key)]
       (hook env parent-data join-query params)
-      (if (backref-attr? key)
+      (if (query.util/backref-attr? key)
         (do
           (assert (not (nil? (:db/id (zip/node parent-data))))
                   (str "Cannot query backref " key " without "
