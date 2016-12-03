@@ -337,46 +337,96 @@
        #{{:component/name "Dislike Button" :extra {:a :b}}
          {:component/name "Seat Picker" :extra {:a :b}}}}
 
-      ;; Query the accounts of users via a backref
+      ;; Query the accounts of users via a singular backref; due to
+      ;; the singular backref and there being only a single account
+      ;; in the :account/_users result, the data in :account/_users
+      ;; becomes a single entity instead of a set
       {:query [{:users [:db/id :user/name
                         {:account/_users [:account/name
                                           {:account/users [:user/name]}]}]}]
        :viewer (resolve-id -10)}
       {:users #{{:db/id (resolve-id -10)
                  :user/name "Joe"
-                 :account/_users #{{:account/name "Company A"
-                                    :account/users #{{:user/name "Joe"}
-                                                     {:user/name "Jeff"}}}}}
+                 :account/_users {:account/name "Company A"
+                                  :account/users #{{:user/name "Joe"}
+                                                   {:user/name "Jeff"}}}}
                 {:db/id (resolve-id -11)
                  :user/name "Jeff"
-                 :account/_users #{{:account/name "Company A"
-                                    :account/users #{{:user/name "Joe"}
-                                                     {:user/name "Jeff"}}}}}}}
+                 :account/_users {:account/name "Company A"
+                                  :account/users #{{:user/name "Joe"}
+                                                   {:user/name "Jeff"}}}}}}
 
-      ;; Query the states of components via backrefs
-      {:query [{:components
-                [:db/id
-                 :component/name
-                 {:component-state/_component
-                  [:component-state/name]}]}]
+      ;; Query the accounts of users via a plural backref; due to
+      ;; the plural backref, the result of :account/_users is turned
+      ;; into a set, despite there being only a single account for each
+      ;; user
+      {:query [{:users [:db/id :user/name
+                        {:accounts/_users [:account/name
+                                           {:account/users [:user/name]}]}]}]
+       :viewer (resolve-id -10)}
+      {:users #{{:db/id (resolve-id -10)
+                 :user/name "Joe"
+                 :accounts/_users #{{:account/name "Company A"
+                                     :account/users #{{:user/name "Joe"}
+                                                      {:user/name "Jeff"}}}}}
+                {:db/id (resolve-id -11)
+                 :user/name "Jeff"
+                 :accounts/_users #{{:account/name "Company A"
+                                     :account/users #{{:user/name "Joe"}
+                                                      {:user/name "Jeff"}}}}}}}
+
+      ;; Query the states of components via a singular backref;
+      ;; due to this, only the first state is returned in the
+      ;; :component-state/_component attribute
+      {:query `[{:components
+                 [:db/id
+                  :component/name
+                  ({:component-state/_component [:component-state/name]}
+                   {:sort/attr :component-state/name})]}]
        :viewer (resolve-id -10)}
       {:components
        #{{:db/id (resolve-id -1000)
           :component/name "Shop Item"
           :component-state/_component
+          {:component-state/name "Shop Item Regular"}}
+         {:db/id (resolve-id -1001)
+          :component/name "Cart Info"
+          :component-state/_component nil}
+         {:db/id (resolve-id -1002)
+          :component/name "Like Button"
+          :component-state/_component
+          {:component-state/name "Like Button Active"}}
+         {:db/id (resolve-id -1003)
+          :component/name "Dislike Button"
+          :component-state/_component
+          {:component-state/name "Dislike Button Active"}}}}
+
+      ;; Query the the states of components via a pluralized backref;
+      ;; This results in all states of a component to be returned as
+      ;; a set, under the pluralized attribute name
+      {:query [{:components
+                [:db/id
+                 :component/name
+                 {:component-states/_component
+                  [:component-state/name]}]}]
+       :viewer (resolve-id -10)}
+      {:components
+       #{{:db/id (resolve-id -1000)
+          :component/name "Shop Item"
+          :component-states/_component
           #{{:component-state/name "Shop Item Regular"}
             {:component-state/name "Shop Item Selected"}}}
          {:db/id (resolve-id -1001)
           :component/name "Cart Info"
-          :component-state/_component #{}}
+          :component-states/_component #{}}
          {:db/id (resolve-id -1002)
           :component/name "Like Button"
-          :component-state/_component
+          :component-states/_component
           #{{:component-state/name "Like Button Regular"}
             {:component-state/name "Like Button Active"}}}
          {:db/id (resolve-id -1003)
           :component/name "Dislike Button"
-          :component-state/_component
+          :component-states/_component
           #{{:component-state/name "Dislike Button Regular"}
             {:component-state/name "Dislike Button Active"}}}}}
 
