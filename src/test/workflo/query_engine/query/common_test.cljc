@@ -448,4 +448,12 @@
              :user/account {:account/name "Company A"}}}
           :account/libraries
           #{{:component-library/name "Shop Components"}
-            {:component-library/name "Social Network Components"}}}}})))
+            {:component-library/name "Social Network Components"}}}}}
+
+      ;; Query a user that has no account; with the join on the unset
+      ;; :user/account attribute, the resulting account should be nil,
+      ;; not #{} or {}
+      {:query [{:user [:user/name {:user/account [:db/id]}]}]
+       :viewer (resolve-id -14)}
+      {:user {:user/name "Unknown"
+              :user/account nil}})))

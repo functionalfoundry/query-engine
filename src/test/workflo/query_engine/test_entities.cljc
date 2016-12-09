@@ -41,8 +41,8 @@
     (s/keys :req [:db/id
                   :user/name
                   :user/email
-                  :user/password
-                  :user/account])))
+                  :user/password]
+            :opt [:user/account])))
 
 ;;;; Component library
 

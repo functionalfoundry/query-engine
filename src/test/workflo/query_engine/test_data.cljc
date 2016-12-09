@@ -38,7 +38,11 @@
     :user/name "Ada"
     :user/email "ada@email.com"
     :user/password "8dgfog"
-    :user/account -3}])
+    :user/account -3}
+   {:db/id -14
+    :user/name "Unknown"
+    :user/email "unknown@email.com"
+    :user/password "sad923"}])
 
 ;;;; Component libraries
 
@@ -133,9 +137,12 @@
                        (update :account/libraries mktempids)))
                  accounts)
             (map (fn [user]
-                   (-> user
-                       (update :db/id mktempid)
-                       (update :user/account mktempid)))
+                   (cond-> user
+                     true
+                     (update :db/id mktempid)
+
+                     (:user/account user)
+                     (update :user/account mktempid)))
                  users)
             (map (fn [library]
                    (-> library

@@ -63,13 +63,15 @@
      :forward-attr (first attr-ref)
      :many? (:many? (second attr-ref))}))
 
-(defn target-entity
+(defn entity-ref
   "Returns the target entity definition for a source entity and
    a ref attribute."
   [source attr]
   (let [source-entity (:entity (meta source))
-        attr-ref (get (e/entity-refs (:name source-entity)) attr)]
-    (ref-entity source attr attr-ref)))
+        attr-ref      (get (e/entity-refs (:name source-entity)) attr)
+        entity        (ref-entity source attr attr-ref)]
+    {:entity entity
+     :many? (:many? attr-ref)}))
 
 (defn singular-key?
   "Returns whether or not a key is singular (e.g. :user,
@@ -168,14 +170,16 @@
                 attrs     (attrs-from-query-root join-query)]
             (fetch-entity-data env (:entity backref) singular? nil
                                attrs params)))
-        (let [entity (target-entity (zip/node parent-data) key)
-              id-or-ids (let [ref-or-refs (get (zip/node parent-data) key)]
-                          (if (map? ref-or-refs)
+        (let [entity-ref  (entity-ref (zip/node parent-data) key)
+              singular?   (not (:many? entity-ref))
+              ref-or-refs (get (zip/node parent-data) key)
+              id-or-ids   (if (map? ref-or-refs)
                             (:db/id ref-or-refs)
-                            (map :db/id ref-or-refs)))
-              singular? (not (coll? id-or-ids))
-              attrs (attrs-from-query-root join-query)]
-          (fetch-entity-data env entity singular? id-or-ids
+                            (if singular?
+                              ref-or-refs
+                              (map :db/id ref-or-refs)))
+              attrs       (attrs-from-query-root join-query)]
+          (fetch-entity-data env (:entity entity-ref) singular? id-or-ids
                              attrs params))))))
 
 (defn resolve-join
