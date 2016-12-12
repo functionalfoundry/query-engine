@@ -221,15 +221,14 @@
       (dz/set-attr ret (dispatch-key z)
                    (cond-> entity-or-entities
                      singular-backref? first))
-      (do
-        (let [meta-before (meta (zip/node ret))]
-          (zip/edit (dz/goto-parent-map
-                     (-> (dz/set-attr ret (dispatch-key z)
-                                      (cond-> entity-or-entities
-                                        singular-backref? first))
-                         (dz/goto-attr (dispatch-key z))
-                         (process-join-query (join-query z) nil f)))
-                    with-meta meta-before))))))
+      (let [meta-before (meta (zip/node ret))]
+        (zip/edit (dz/goto-parent-map
+                   (-> (dz/set-attr ret (dispatch-key z)
+                                    (cond-> entity-or-entities
+                                      singular-backref? first))
+                       (dz/goto-attr (dispatch-key z))
+                       (process-join-query (join-query z) nil f)))
+                  with-meta meta-before)))))
 
 (defn process-plain-query-expr
   "Processes a plain query expression."
