@@ -1,7 +1,7 @@
 #!/usr/bin/env boot
 
 (def +project+ 'workflo/query-engine)
-(def +version+ "0.1.9")
+(def +version+ "0.1.10")
 
 (def +repositories+
   [["workflo-private"
@@ -35,7 +35,7 @@
 
                  ;; Workflo
                  [workflo/boot-tasks "0.1.7" :scope "test"]
-                 [workflo/macros "0.2.30"]])
+                 [workflo/macros "0.2.31"]])
 
 (require '[adzerk.boot-test :as boot-test]
          '[environ.boot :refer [environ]]
