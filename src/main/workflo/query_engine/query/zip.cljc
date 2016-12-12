@@ -162,11 +162,9 @@
 (declare process-query-root)
 
 (defn process-keyword
-  "Processes a query keyword. This only handles top-level keywords,
-   as these, by convention, refer to one or many instances of an
-   entity type."
+  "Processes a query keyword."
   [ret z params f]
-  (let [ret' (f nil z params)]
+  (let [ret' (f ret z params)]
     (if (toplevel? z)
       (zip/edit ret assoc (dispatch-key z) ret')
       (if-not (nil? ret')
