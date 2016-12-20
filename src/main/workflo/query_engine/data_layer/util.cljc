@@ -36,7 +36,7 @@
   (if-let [sort-attr (:sort/attr params)]
     (vec (cond-> (sort-by sort-attr entities)
            (= :sort/descending (:sort/order params)) reverse))
-    (set entities)))
+    entities))
 
 (defn paginate
   [params entities]
