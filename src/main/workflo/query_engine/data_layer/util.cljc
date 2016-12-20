@@ -17,8 +17,8 @@
 
 (defn filter-entity
   [data entity params]
-  (let [refs (es/entity-refs entity)]
-    (if-let [filter-params (seq (filter filter-param? params))]
+  (if-let [filter-params (seq (filter filter-param? params))]
+    (let [refs (es/entity-refs entity)]
       (when (every? (fn [[k v]]
                       (if (get refs k)
                         (if (:many? (get refs k))
@@ -28,8 +28,8 @@
                               (= v (:db/id (get data k)))))
                         (= (get data k) v)))
                     filter-params)
-        data)
-      data)))
+        data))
+    data))
 
 (defn sort
   [params entities]
