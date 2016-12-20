@@ -6,26 +6,10 @@
             [workflo.macros.query.util :as query.util]
             [workflo.query-engine.data-layer :as data-layer]
             [workflo.query-engine.query.data-zip :as dz]
-            [workflo.query-engine.query.zip :as qz]))
+            [workflo.query-engine.query.zip :as qz]
+            [workflo.query-engine.util :as util]))
 
 ;;;; Working with entities
-
-(defn qualified-name
-  [sym-or-kw]
-  (let [ns (namespace sym-or-kw)
-        nm (name sym-or-kw)]
-    (cond->> nm
-      ns (str ns "/"))))
-
-(defn entity-from-query-key
-  "Takes a query key (e.g. :users or :user) and resolves it
-   it into the corresponding entity definition."
-  [k]
-  (or (try (e/resolve-entity (symbol (qualified-name k)))
-           (catch #?(:cljs js/Error :clj Exception) e))
-      (try (e/resolve-entity (symbol (-> (qualified-name k)
-                                         (inflections/singular))))
-           (catch #?(:cljs js/Error :clj Exception) e))))
 
 (defn ref-entity
   [source attr attr-ref]
@@ -68,17 +52,18 @@
    a ref attribute."
   [source attr]
   (let [source-entity (:entity (meta source))
-        attr-ref      (get (e/entity-refs (:name source-entity)) attr)
+        attr-ref      (get (util/memoized-entity-refs (:name source-entity)) attr)
         entity        (ref-entity source attr attr-ref)]
     {:entity entity
      :many? (:many? attr-ref)}))
+
 
 (defn singular-key?
   "Returns whether or not a key is singular (e.g. :user,
    not :users)."
   [k]
-  (= (qualified-name k)
-     (inflections/singular (qualified-name k))))
+  (= (util/qualified-name k)
+     (inflections/singular (util/qualified-name k))))
 
 ;;;; Data fetching
 
@@ -111,7 +96,7 @@
       (hook env parent-data z params)
       (when (qz/toplevel? z)
         (let [key (qz/dispatch-key z)
-              entity (entity-from-query-key key)]
+              entity (util/memoized-entity-from-query-key key)]
           (fetch-entity-data env entity
                              (singular-key? key)
                              nil [] params))))))
@@ -121,7 +106,7 @@
   [env opts z attrs params]
   (let [key (zip/node (qz/ident-name z))
         value (zip/node (qz/ident-value z))
-        entity (entity-from-query-key key)]
+        entity (util/memoized-entity-from-query-key key)]
     (fetch-entity-data env entity true
                        (when (not= value '_) value)
                        attrs params)))
@@ -144,7 +129,7 @@
   (let [key (qz/dispatch-key join-source)]
     (if-let [hook (get (:query-hooks opts) key)]
       (hook env nil join-query params)
-      (let [entity (entity-from-query-key key)
+      (let [entity (util/memoized-entity-from-query-key key)
             attrs (attrs-from-query-root join-query)]
         (fetch-entity-data env entity (singular-key? key)
                            (:db/id params)
