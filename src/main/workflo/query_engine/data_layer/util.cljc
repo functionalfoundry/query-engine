@@ -1,6 +1,17 @@
 (ns workflo.query-engine.data-layer.util
   (:refer-clojure :exclude [sort])
-  (:require [workflo.query-engine.util :as util]))
+  (:require [workflo.macros.entity.schema :as es]
+            [workflo.query-engine.util :as util]))
+
+;;;; Data fetching
+
+(defn has-entity-attrs-rule [attrs]
+  (into '[(has-entity-attrs? ?e)]
+        (comp (remove #{:db/id})
+              (map (fn [attr] ['?e attr])))
+        attrs))
+
+;;;; Result processing, filtering, sorting etc.
 
 (def ^:private sort-params
   #{:sort/attr :sort/order})

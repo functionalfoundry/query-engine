@@ -29,19 +29,18 @@
       (fetch* id))))
 
 (defn- fetch-entities
-  ([{:keys [db viewer] :as env} entity]
+  ([{:keys [cache db viewer] :as env} entity]
    (let [req-attrs (remove #{:db/id} (es/required-keys entity))
-         rules     [(into '[(has-entity-attrs? ?e)]
-                          (mapv (fn [attr] ['?e attr])
-                                req-attrs))]
-         ids (d/q '[:find [?e ...]
-                    :in $ [?a ...] ?entity ?viewer ?authorized %
-                    :where [?e ?a]
-                           (has-entity-attrs? ?e)
-                           [(?authorized $ ?entity ?e ?viewer)]]
-                  db (es/required-keys entity) entity viewer
-                  authorized? rules)]
-     (fetch-entities env entity ids)))
+         rules     [(util/has-entity-attrs-rule req-attrs)]
+         entities  (d/q '[:find [(pull ?e [*]) ...]
+                          :in $ [?a ...] ?entity ?viewer ?authorized %
+                          :where [?e ?a]
+                                 (has-entity-attrs? ?e)
+                                 [(?authorized $ ?entity ?e ?viewer)]]
+                        db req-attrs entity viewer authorized? rules)]
+     (when (and cache (seq entities))
+       (c/set-many cache (into {} (map (juxt :db/id identity)) entities)))
+     entities))
   ([{:keys [db cache viewer]} entity ids]
    (letfn [(fetch* [ids]
              (d/q '[:find [(pull ?e [*]) ...]
@@ -51,7 +50,7 @@
      (if cache
        (c/get-many cache ids
                    (fn [missing-ids]
-                     (into {} (map (fn [e] [(:db/id e) e]))
+                     (into {} (map (juxt :db/id identity))
                            (fetch* missing-ids))))
        (fetch* ids)))))
 

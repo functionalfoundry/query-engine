@@ -6,36 +6,34 @@
             [workflo.query-engine.data-layer.util :as util]))
 
 (defn- fetch-entity
-  [{:keys [db cache viewer]} entity id]
+  [{:keys [db cache]} entity id]
   (letfn [(fetch* [id]
-            (d/q '[:find (pull ?e [*]) .
-                   :in $ ?e ?entity ?viewer]
-                 db id entity viewer))]
+            (d/pull db '[*] id))]
     (if cache
       (c/get-one cache id fetch*)
       (fetch* id))))
 
 (defn- fetch-entities
-  ([{:keys [db viewer] :as env} entity]
+  ([{:keys [cache db] :as env} entity]
    (let [req-attrs (remove #{:db/id} (es/required-keys entity))
-         rules     [(into '[(has-entity-attrs? ?e)]
-                          (mapv (fn [attr] ['?e attr])
-                                req-attrs))]
-         ids (d/q '[:find [?e ...]
-                    :in $ [?a ...] ?entity ?viewer %
-                    :where [?e ?a]
-                           (has-entity-attrs? ?e)]
-                  db (es/required-keys entity) entity viewer rules)]
-     (fetch-entities env entity ids)))
-  ([{:keys [db cache viewer]} entity ids]
+         rules     [(util/has-entity-attrs-rule req-attrs)]
+         entities  (d/q '[:find [(pull ?e [*]) ...]
+                          :in $ [?a ...] %
+                          :where [?e ?a]
+                                 (has-entity-attrs? ?e)]
+                        db req-attrs rules)]
+     (when (and cache (seq entities))
+       (c/set-many cache (into {} (map (juxt :db/id identity)) entities)))
+     entities))
+  ([{:keys [db cache]} entity ids]
    (letfn [(fetch* [ids]
              (d/q '[:find [(pull ?e [*]) ...]
-                    :in $ [?e ...] ?entity ?viewer]
-                  db ids entity viewer))]
+                    :in $ [?e ...]]
+                  db ids entity))]
      (if cache
        (c/get-many cache ids
                    (fn [missing-ids]
-                     (into {} (map (fn [e] [(:db/id e) e]))
+                     (into {} (map (juxt :db/id identity))
                            (fetch* missing-ids))))
        (fetch* ids)))))
 
