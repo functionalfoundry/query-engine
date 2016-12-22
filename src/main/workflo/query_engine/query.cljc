@@ -9,6 +9,11 @@
             [workflo.query-engine.query.zip :as qz]
             [workflo.query-engine.util :as util]))
 
+;;;; Helpers
+
+(defn id-attr [env]
+  (get env :id-attr :db/id))
+
 ;;;; Working with entities
 
 (defn ref-entity
@@ -70,10 +75,10 @@
 (defn fetch-entity-data
   "Fetches one or more items of an entity from the data layer."
   [env entity singular? id-or-ids attrs params]
-  (let [env (select-keys env [:cache :data-layer :db :viewer])
-        attrs (if (seq attrs) attrs [:db/id])]
+  (let [env   (select-keys env [:cache :data-layer :db :id-attr :viewer])
+        attrs (if (seq attrs) attrs [(id-attr env)])]
     (if singular?
-      (if-let [id (or id-or-ids (:db/id params))]
+      (if-let [id (or id-or-ids (get params (id-attr env)))]
         (data-layer/fetch-one (:data-layer env) env entity
                               id params attrs)
         (first (data-layer/fetch-all (:data-layer env) env entity
@@ -132,7 +137,7 @@
       (let [entity (util/memoized-entity-from-query-key key)
             attrs (attrs-from-query-root join-query)]
         (fetch-entity-data env entity (singular-key? key)
-                           (:db/id params)
+                           (get params (id-attr env))
                            attrs params)))))
 
 (defn resolve-nested-join
@@ -146,8 +151,7 @@
         (do
           (assert (not (nil? (:db/id (zip/node parent-data))))
                   (str "Cannot query backref " key " without "
-                       "a :db/id in parent data: "
-                       (zip/node parent-data)))
+                       "a :db/id in parent data: " (zip/node parent-data)))
           (let [backref   (backref (zip/node parent-data) key)
                 parent-id (:db/id (zip/node parent-data))
                 params    (assoc params (:forward-attr backref) parent-id)
@@ -164,8 +168,9 @@
                               ref-or-refs
                               (map :db/id ref-or-refs)))
               attrs       (attrs-from-query-root join-query)]
-          (fetch-entity-data env (:entity entity-ref) singular? id-or-ids
-                             attrs params))))))
+          (fetch-entity-data (assoc env :id-attr :db/id)
+                             (:entity entity-ref) singular?
+                             id-or-ids attrs params))))))
 
 (defn resolve-join
   "Resolves a join query into data given a parent data node

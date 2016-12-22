@@ -6,15 +6,20 @@
             [workflo.query-engine.data-layer.util :as util]))
 
 (defn- fetch-entity
-  [{:keys [db cache]} entity id]
+  [{:keys [cache db id-attr] :or {id-attr :db/id}} entity id]
   (letfn [(fetch* [id]
-            (d/pull db '[*] id))]
+            (if (= :db/id id-attr)
+              (d/pull db '[*] id)
+              (try
+                (d/pull db '[*] [id-attr id])
+                (catch #?(:cljs js/Error :clj Exception) e
+                  nil))))]
     (if cache
       (c/get-one cache id fetch*)
       (fetch* id))))
 
 (defn- fetch-entities
-  ([{:keys [cache db] :as env} entity]
+  ([{:keys [cache db id-attr] :or {id-attr :db/id} :as env} entity]
    (let [req-attrs (remove #{:db/id} (es/required-keys entity))
          rules     [(util/has-entity-attrs-rule req-attrs)]
          entities  (d/q '[:find [(pull ?e [*]) ...]
@@ -23,17 +28,22 @@
                                  (has-entity-attrs? ?e)]
                         db req-attrs rules)]
      (when (and cache (seq entities))
-       (c/set-many cache (into {} (map (juxt :db/id identity)) entities)))
+       (c/set-many cache (into {} (map (juxt id-attr identity)) entities)))
      entities))
-  ([{:keys [db cache]} entity ids]
+  ([{:keys [cache db id-attr] :or {id-attr :db/id}} entity ids]
    (letfn [(fetch* [ids]
-             (d/q '[:find [(pull ?e [*]) ...]
-                    :in $ [?e ...]]
-                  db ids entity))]
+             (if (= :db/id id-attr)
+               (d/q '[:find [(pull ?e [*]) ...]
+                      :in $ [?e ...]]
+                    db ids entity)
+               (d/q '[:find [(pull ?e [*]) ...]
+                      :in $ ?id-attr [?id ...]
+                      :where [?e ?id-attr ?id]]
+                    db id-attr ids entity)))]
      (if cache
        (c/get-many cache ids
                    (fn [missing-ids]
-                     (into {} (map (juxt :db/id identity))
+                     (into {} (map (juxt id-attr identity))
                            (fetch* missing-ids))))
        (fetch* ids)))))
 

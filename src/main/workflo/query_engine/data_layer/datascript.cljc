@@ -18,18 +18,24 @@
     true))
 
 (defn- fetch-entity
-  [{:keys [db cache viewer]} entity id]
+  [{:keys [cache db id-attr viewer] :or {id-attr :db/id}} entity id]
   (letfn [(fetch* [id]
-            (d/q '[:find (pull ?e [*]) .
-                   :in $ ?e ?entity ?viewer ?authorized
-                   :where [(?authorized $ ?entity ?e ?viewer)]]
-                 db id entity viewer authorized?))]
+            (if (= :db/id id-attr)
+              (d/q '[:find (pull ?e [*]) .
+                     :in $ ?e ?entity ?viewer ?authorized
+                     :where [(?authorized $ ?entity ?e ?viewer)]]
+                   db id entity viewer authorized?)
+              (d/q '[:find (pull ?e [*]) .
+                     :in $ ?id-attr ?id ?entity ?viewer ?authorized
+                     :where [?e ?id-attr ?id]
+                            [(?authorized $ ?entity ?e ?viewer)]]
+                   db id-attr id entity viewer authorized?)))]
     (if cache
       (c/get-one cache id fetch*)
       (fetch* id))))
 
 (defn- fetch-entities
-  ([{:keys [cache db viewer] :as env} entity]
+  ([{:keys [cache db id-attr viewer] :or {id-attr :db/id} :as env} entity]
    (let [req-attrs (remove #{:db/id} (es/required-keys entity))
          rules     [(util/has-entity-attrs-rule req-attrs)]
          entities  (d/q '[:find [(pull ?e [*]) ...]
@@ -39,18 +45,24 @@
                                  [(?authorized $ ?entity ?e ?viewer)]]
                         db req-attrs entity viewer authorized? rules)]
      (when (and cache (seq entities))
-       (c/set-many cache (into {} (map (juxt :db/id identity)) entities)))
+       (c/set-many cache (into {} (map (juxt id-attr identity)) entities)))
      entities))
-  ([{:keys [db cache viewer]} entity ids]
+  ([{:keys [cache db id-attr viewer] :or {id-attr :db/id}} entity ids]
    (letfn [(fetch* [ids]
-             (d/q '[:find [(pull ?e [*]) ...]
-                    :in $ [?e ...] ?entity ?viewer ?authorized
-                    :where [(?authorized $ ?entity ?e ?viewer)]]
-                  db ids entity viewer authorized?))]
+             (if (= :db/id id-attr)
+               (d/q '[:find [(pull ?e [*]) ...]
+                      :in $ [?e ...] ?entity ?viewer ?authorized
+                      :where [(?authorized $ ?entity ?e ?viewer)]]
+                    db ids entity viewer authorized?)
+               (d/q '[:find [(pull ?e [*]) ...]
+                      :in $ ?id-attr [?id ...] ?entity ?viewer ?authorized
+                      :where [?e ?id-attr ?id]
+                             [(?authorized $ ?entity ?e ?viewer)]]
+                    db id-attr ids entity viewer authorized?)))]
      (if cache
        (c/get-many cache ids
                    (fn [missing-ids]
-                     (into {} (map (juxt :db/id identity))
+                     (into {} (map (juxt id-attr identity))
                            (fetch* missing-ids))))
        (fetch* ids)))))
 
