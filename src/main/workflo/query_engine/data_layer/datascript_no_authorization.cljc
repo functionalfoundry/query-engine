@@ -1,64 +1,45 @@
-(ns workflo.query-engine.data-layer.datascript
+(ns workflo.query-engine.data-layer.datascript-no-authorization
   (:require [datascript.core :as d]
             [workflo.macros.entity.schema :as es]
             [workflo.query-engine.cache :as c]
             [workflo.query-engine.data-layer :refer [DataLayer]]
             [workflo.query-engine.data-layer.util :as util]))
 
-(defn authorized?
-  [db entity e viewer]
-  (if-let [auth-rules (some-> (:auth entity) (apply [{}]))]
-    (let [results (mapv (fn [auth-rule]
-                          (d/q '[:find ?e
-                                 :in $ ?e ?viewer %
-                                 :where (auth ?e ?viewer)]
-                               db e viewer [auth-rule]))
-                        auth-rules)]
-      (not (empty? (apply concat results))))
-    true))
-
 (defn- fetch-entity
-  [{:keys [cache db id-attr viewer] :or {id-attr :db/id}} entity id]
+  [{:keys [cache db id-attr] :or {id-attr :db/id}} entity id]
   (letfn [(fetch* [id]
             (if (= :db/id id-attr)
-              (d/q '[:find (pull ?e [*]) .
-                     :in $ ?e ?entity ?viewer ?authorized
-                     :where [(?authorized $ ?entity ?e ?viewer)]]
-                   db id entity viewer authorized?)
-              (d/q '[:find (pull ?e [*]) .
-                     :in $ ?id-attr ?id ?entity ?viewer ?authorized
-                     :where [?e ?id-attr ?id]
-                            [(?authorized $ ?entity ?e ?viewer)]]
-                   db id-attr id entity viewer authorized?)))]
+              (d/pull db '[*] id)
+              (try
+                (d/pull db '[*] [id-attr id])
+                (catch #?(:cljs js/Error :clj Exception) e
+                  nil))))]
     (if cache
       (c/get-one cache id fetch*)
       (fetch* id))))
 
 (defn- fetch-entities
-  ([{:keys [cache db id-attr viewer] :or {id-attr :db/id} :as env} entity]
+  ([{:keys [cache db id-attr] :or {id-attr :db/id} :as env} entity]
    (let [req-attrs (remove #{:db/id} (es/required-keys entity))
          rules     [(util/has-entity-attrs-rule req-attrs)]
          entities  (d/q '[:find [(pull ?e [*]) ...]
-                          :in $ [?a ...] ?entity ?viewer ?authorized %
+                          :in $ [?a ...] %
                           :where [?e ?a]
-                                 (has-entity-attrs? ?e)
-                                 [(?authorized $ ?entity ?e ?viewer)]]
-                        db req-attrs entity viewer authorized? rules)]
+                                 (has-entity-attrs? ?e)]
+                        db req-attrs rules)]
      (when (and cache (seq entities))
        (c/set-many cache (into {} (map (juxt id-attr identity)) entities)))
      entities))
-  ([{:keys [cache db id-attr viewer] :or {id-attr :db/id}} entity ids]
+  ([{:keys [cache db id-attr] :or {id-attr :db/id}} entity ids]
    (letfn [(fetch* [ids]
              (if (= :db/id id-attr)
                (d/q '[:find [(pull ?e [*]) ...]
-                      :in $ [?e ...] ?entity ?viewer ?authorized
-                      :where [(?authorized $ ?entity ?e ?viewer)]]
-                    db ids entity viewer authorized?)
+                      :in $ [?e ...]]
+                    db ids entity)
                (d/q '[:find [(pull ?e [*]) ...]
-                      :in $ ?id-attr [?id ...] ?entity ?viewer ?authorized
-                      :where [?e ?id-attr ?id]
-                             [(?authorized $ ?entity ?e ?viewer)]]
-                    db id-attr ids entity viewer authorized?)))]
+                      :in $ ?id-attr [?id ...]
+                      :where [?e ?id-attr ?id]]
+                    db id-attr ids entity)))]
      (if cache
        (c/get-many cache ids
                    (fn [missing-ids]

@@ -43,17 +43,24 @@
                              $ ?entity ?e ?viewer)]]
                   db req-attrs entity viewer rules)]
      (fetch-entities env entity ids)))
-  ([{:keys [db cache viewer]} entity ids]
+  ([{:keys [cache db id-attr viewer] :or {id-attr :db/id}} entity ids]
    (letfn [(fetch* [ids]
-             (d/q '[:find [(pull ?e [*]) ...]
-                    :in $ [?e ...] ?entity ?viewer
-                    :where [(workflo.query-engine.data-layer.datomic/authorized?
-                             $ ?entity ?e ?viewer)]]
-                  db ids entity viewer))]
+             (if (= :db/id id-attr)
+               (d/q '[:find [(pull ?e [*]) ...]
+                      :in $ [?e ...] ?entity ?viewer
+                      :where [(workflo.query-engine.data-layer.datomic/authorized?
+                               $ ?entity ?e ?viewer)]]
+                    db ids entity viewer)
+               (d/q '[:find [(pull ?e [*]) ...]
+                      :in $ ?id-attr [?id ...] ?entity ?viewer
+                      :where [?e ?id-attr ?id]
+                             [(workflo.query-engine.data-layer.datomic/authorized?
+                               $ ?entity ?e ?viewer)]]
+                    db id-attr ids entity viewer)))]
      (if cache
        (c/get-many cache ids
                    (fn [missing-ids]
-                     (into {} (map (fn [e] [(:db/id e) e]))
+                     (into {} (map (juxt id-attr identity))
                            (fetch* missing-ids))))
        (fetch* ids)))))
 
