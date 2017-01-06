@@ -35,7 +35,7 @@
 
                  ;; Workflo
                  [workflo/boot-tasks "0.1.8" :scope "test"]
-                 [workflo/macros "0.2.32"]])
+                 [workflo/macros "0.2.35"]])
 
 (require '[adzerk.boot-test :as boot-test]
          '[environ.boot :refer [environ]]
