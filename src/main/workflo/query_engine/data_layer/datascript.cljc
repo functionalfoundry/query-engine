@@ -1,5 +1,6 @@
 (ns workflo.query-engine.data-layer.datascript
   (:require [datascript.core :as d]
+            [workflo.macros.entity :as entities]
             [workflo.macros.entity.schema :as es]
             [workflo.query-engine.cache :as c]
             [workflo.query-engine.data-layer :refer [DataLayer]]
@@ -7,15 +8,7 @@
 
 (defn authorized?
   [db entity e viewer]
-  (if-let [auth-rules (some-> (:auth entity) (apply [{}]))]
-    (let [results (mapv (fn [auth-rule]
-                          (d/q '[:find ?e
-                                 :in $ ?e ?viewer %
-                                 :where (auth ?e ?viewer)]
-                               db e viewer [auth-rule]))
-                        auth-rules)]
-      (not (empty? (apply concat results))))
-    true))
+  (entities/authorized? entity {:db db} e viewer))
 
 (defn- fetch-entity
   [{:keys [cache db id-attr skip-authorization? viewer]

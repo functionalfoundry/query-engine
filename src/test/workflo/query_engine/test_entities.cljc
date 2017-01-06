@@ -14,14 +14,18 @@
 (s/def :account/libraries (t/entity-ref 'component-library :many? true))
 
 (defentity account
-  (auth [db e viewer]
-    '[[(auth ?e ?viewer)
-       [?e :account/users ?viewer]]])
   (spec
     (s/keys :req [:db/id
                   :account/name
                   :account/users]
-            :opt [:account/libraries])))
+            :opt [:account/libraries]))
+  (auth-query
+    [({account [db [id]
+                account [({users [db [id]]}
+                          {db/id ?viewer-id})]]}
+      {db/id ?entity-id})])
+  (auth
+    (and account (seq users))))
 
 ;;;; User
 
@@ -31,18 +35,22 @@
 (s/def :user/account (t/entity-ref 'account))
 
 (defentity user
-  (auth [db e viewer]
-    '[[(auth ?e ?viewer)
-       [(= ?e ?viewer)]]
-      [(auth ?e ?viewer)
-       [?a :account/users ?viewer]
-       [?a :account/users ?e]]])
   (spec
     (s/keys :req [:db/id
                   :user/name
                   :user/email
                   :user/password]
-            :opt [:user/account])))
+            :opt [:user/account]))
+  (auth-query
+    [({user [db [id :as user-id]]}
+      {db/id ?entity-id})
+     ({account [db [id]
+                account [({users [db [id]]}
+                          {db/id ?viewer-id})]]}
+      {account/users ?entity-id})])
+  (auth
+    (or (= user-id viewer-id)
+        (seq users))))
 
 ;;;; Component library
 
@@ -54,19 +62,23 @@
 (s/def :component-library/public? ::t/boolean)
 
 (defentity component-library
-  (auth [db e viewer]
-    '[[(auth ?e ?viewer)
-       [?e :component-library/account ?a]
-       [?viewer :user/account ?a]]
-      [(auth ?e ?viewer)
-       [?e :component-library/public? true]]])
   (spec
     (s/keys :req [:db/id
                   :component-library/name
                   :component-library/account
                   :component-library/creator]
             :opt [:component-library/components
-                  :component-library/public?])))
+                  :component-library/public?]))
+  (auth-query
+    [({user [db [id]
+             user [{account [db [id]]} :as viewer-account]]}
+      {db/id ?viewer-id})
+     ({component-library [component-library [{account [db [id]]} :as lib-account
+                                             public?]]}
+      {db/id ?entity-id})])
+  (auth
+    (or (= viewer-account lib-account)
+        public?)))
 
 ;;;; Component
 
@@ -77,19 +89,23 @@
 (s/def :component/public? ::t/boolean)
 
 (defentity component
-  (auth [db e viewer]
-    '[[(auth ?e ?viewer)
-       [?e :component/account ?a]
-       [?viewer :user/account ?a]]
-      [(auth ?e ?viewer)
-       [?e :component/public? true]]])
   (spec
     (s/keys :req [:db/id
                   :component/name
                   :component/account
                   :component/creator]
             :opt [:component/states
-                  :component/public?])))
+                  :component/public?]))
+  (auth-query
+    [({user [db [id]
+             user [{account [db [id]]} :as viewer-account]]}
+      {db/id ?viewer-id})
+     ({component [component [{account [db [id]]} :as component-account
+                             public?]]}
+      {db/id ?entity-id})])
+  (auth
+    (or (= viewer-account component-account)
+        public?)))
 
 ;;;; Component state
 
@@ -97,15 +113,17 @@
 (s/def :component-state/component (t/entity-ref 'component))
 
 (defentity component-state
-  (auth [db e viewer]
-    '[[(auth ?e ?viewer)
-       [?c :component/states ?e]
-       [?c :component/account ?a]
-       [?viewer :user/account ?a]]
-      [(auth ?e ?viewer)
-       [?c :component/states ?e]
-       [?c :component/public? true]]])
   (spec
      (s/keys :req [:db/id
                    :component-state/name
-                   :component-state/component])))
+                   :component-state/component]))
+  (auth-query
+    [({user [db [id]
+             user [{account [db [id]]} :as viewer-account]]}
+      {db/id ?viewer-id})
+     ({component [component [{account [db [id]]} :as component-account
+                             public?]]}
+      {component/states ?entity-id})])
+  (auth
+    (or (= viewer-account component-account)
+        public?)))

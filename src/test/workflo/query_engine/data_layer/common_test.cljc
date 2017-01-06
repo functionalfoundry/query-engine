@@ -1,6 +1,8 @@
 (ns workflo.query-engine.data-layer.common-test
   (:require [clojure.test :refer [are]]
             [workflo.macros.entity :as e]
+            [workflo.macros.query.om-next :as query.om-next]
+            [workflo.query-engine.core :as qe]
             [workflo.query-engine.data-layer :as data-layer]))
 
 (defn test-fetch-one
@@ -19,6 +21,14 @@
            (let [{:keys [viewer entity
                          id params attrs
                          empty-cache?]} args]
+             (e/configure-entities!
+              {:auth-query (fn [{:keys [db]} query]
+                             (let [query' (query.om-next/query query)]
+                               (qe/query query' layer
+                                         {:db db
+                                          :cache (new-cache)
+                                          :viewer viewer
+                                          :skip-authorization? true})))})
              (data-layer/fetch-one layer
                                    {:db (db conn)
                                     :cache (if empty-cache?
@@ -117,6 +127,14 @@
            (let [{:keys [viewer entity
                          ids params attrs
                          empty-cache?]} args]
+             (e/configure-entities!
+              {:auth-query (fn [{:keys [db]} query]
+                             (let [query' (query.om-next/query query)]
+                               (qe/query query' layer
+                                         {:db db
+                                          :cache (new-cache)
+                                          :viewer viewer
+                                          :skip-authorization? true})))})
              (data-layer/fetch-many layer
                                     {:db (db conn)
                                      :cache (if empty-cache?
@@ -248,6 +266,14 @@
            (let [{:keys [viewer entity
                          id params attrs
                          empty-cache?]} args]
+             (e/configure-entities!
+              {:auth-query (fn [{:keys [db]} query]
+                             (let [query' (query.om-next/query query)]
+                               (qe/query query' layer
+                                         {:db db
+                                          :cache (new-cache)
+                                          :viewer viewer
+                                          :skip-authorization? true})))})
              (data-layer/fetch-all layer
                                    {:db (db conn)
                                     :cache (if empty-cache?

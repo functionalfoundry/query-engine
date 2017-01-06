@@ -1,21 +1,14 @@
 (ns workflo.query-engine.data-layer.datomic
   (:require [datomic.api :as d]
+            [workflo.macros.entity :as entities]
             [workflo.macros.entity.schema :as es]
             [workflo.query-engine.cache :as c]
             [workflo.query-engine.data-layer :refer [DataLayer]]
             [workflo.query-engine.data-layer.util :as util]))
 
 (defn authorized?
-  [db entity e viewer]
-  (if-let [auth-rules (some-> (:auth entity) (apply [{}]))]
-    (let [results (map (fn [auth-rule]
-                         (d/q '[:find ?e
-                                :in $ ?e ?viewer %
-                                :where (auth ?e ?viewer)]
-                              db e viewer [auth-rule]))
-                       auth-rules)]
-      (not (empty? (apply concat results))))
-    true))
+  [db entity entity-id viewer-id]
+  (entities/authorized? entity {:db db} entity-id viewer-id))
 
 (defn- fetch-entity
   [{:keys [db cache id-attr skip-authorization? viewer]

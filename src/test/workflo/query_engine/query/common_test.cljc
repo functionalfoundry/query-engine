@@ -1,6 +1,7 @@
 (ns workflo.query-engine.query.common-test
   (:require [clojure.test :refer [are]]
             [workflo.macros.entity :as e]
+            [workflo.macros.query.om-next :as query.om-next]
             [workflo.query-engine.core :as qe]
             [clojure.zip :as zip]))
 
@@ -18,7 +19,15 @@
     (are [args result]
         (= result
            (let [{:keys [viewer query empty-cache?
-                         :query-hooks]} args]
+                         query-hooks]} args]
+             (e/configure-entities!
+              {:auth-query (fn [{:keys [db]} query]
+                             (let [query' (query.om-next/query query)]
+                               (qe/query query' layer
+                                         {:db db
+                                          :cache (new-cache)
+                                          :viewer viewer
+                                          :skip-authorization? true})))})
              (qe/query query layer
                        {:db (db conn)
                         :cache (if empty-cache?
