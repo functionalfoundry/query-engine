@@ -75,7 +75,8 @@
 (defn fetch-entity-data
   "Fetches one or more items of an entity from the data layer."
   [env entity singular? id-or-ids attrs params]
-  (let [env   (select-keys env [:cache :data-layer :db :id-attr :viewer])
+  (let [env   (select-keys env [:cache :data-layer :db :id-attr :viewer
+                                :skip-authorization?])
         attrs (if (seq attrs) attrs [(id-attr env)])]
     (if singular?
       (if-let [id (or id-or-ids (get params (id-attr env)))]
