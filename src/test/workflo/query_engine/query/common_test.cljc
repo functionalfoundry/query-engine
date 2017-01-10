@@ -464,4 +464,39 @@
       {:query [{:user [:user/name {:user/account [:db/id]}]}]
        :viewer (resolve-id -14)}
       {:user {:user/name "Unknown"
-              :user/account nil}})))
+              :user/account nil}}
+
+      ;; Use deep parameterization to query all users that belong
+      ;; to the account with the given :db/id
+      {:query `[({:users [:user/name {:user/account [:account/name]}]}
+                 {[:user/account :db/id] ~(resolve-id -1)})]
+       :viewer (resolve-id -10)}
+      {:users
+       #{{:user/name "Joe" :user/account {:account/name "Company A"}}
+         {:user/name "Jeff" :user/account {:account/name "Company A"}}}}
+
+      ;; Use deep parameterization to query all users that belong
+      ;; to the account with the given name
+      {:query '[({:users [:user/name {:user/account [:account/name]}]}
+                 {[:user/account :account/name] "Company A"})]
+       :viewer (resolve-id -10)}
+      {:users
+       #{{:user/name "Joe" :user/account {:account/name "Company A"}}
+         {:user/name "Jeff" :user/account {:account/name "Company A"}}}}
+
+      ;; Use deep parameterization to query all users that belong
+      ;; to the account with the given name and that have the name "Jeff"
+      {:query '[({:users [:user/name {:user/account [:account/name]}]}
+                 {[:user/account :account/name] "Company A"
+                  :user/name "Jeff"})]
+       :viewer (resolve-id -10)}
+      {:users
+       #{{:user/name "Jeff" :user/account {:account/name "Company A"}}}}
+
+      ;; Use deep parameterization to query all users that belong
+      ;; to the account with the given name and that have the name "Linda"
+      {:query '[({:users [:user/name {:user/account [:account/name]}]}
+                 {[:user/account :account/name] "Company A"
+                  :user/name "Linda"})]
+       :viewer (resolve-id -10)}
+      {:users #{}})))
