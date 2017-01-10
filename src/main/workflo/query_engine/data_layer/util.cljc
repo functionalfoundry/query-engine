@@ -19,12 +19,18 @@
 (def ^:private pagination-params
   #{:page/after-id :page/count})
 
-(def ^:private non-filter-params
+(def ^:private reserved-params
   (clojure.set/union sort-params pagination-params))
 
 (defn- filter-param?
   [[k v]]
-  (not (some #{k} non-filter-params)))
+  (not (some #{k} reserved-params)))
+
+;;; Filtering
+
+(defn- reserved-param?
+  [[k v]]
+  (some #{k} reserved-params))
 
 (defn filter-entity
   [data entity params]
@@ -42,12 +48,16 @@
         data))
     data))
 
+;;; Sorting
+
 (defn sort
   [params entities]
   (if-let [sort-attr (:sort/attr params)]
     (vec (cond-> (sort-by sort-attr entities)
            (= :sort/descending (:sort/order params)) reverse))
     entities))
+
+;;; Pagination
 
 (defn paginate
   [params entities]
@@ -64,6 +74,8 @@
              (take count)
              (vec))))
     entities))
+
+;;; Selecting attributes
 
 (defn select-attrs
   [data attrs]
