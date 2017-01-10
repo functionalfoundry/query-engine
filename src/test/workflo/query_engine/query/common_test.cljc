@@ -25,7 +25,6 @@
                              (let [query' (query.om-next/query query)]
                                (qe/query query' layer
                                          {:db db
-                                          :cache (new-cache)
                                           :viewer viewer
                                           :skip-authorization? true})))})
              (qe/query query layer
