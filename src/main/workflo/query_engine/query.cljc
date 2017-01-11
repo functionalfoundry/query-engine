@@ -89,8 +89,8 @@
           (data-layer/fetch-many (:data-layer env) env entity
                                  id-or-ids params attrs)
           #{})
-        (data-layer/fetch-all (:data-layer env) env entity
-                              params attrs)))))
+        (or (data-layer/fetch-all (:data-layer env) env entity params attrs)
+            #{})))))
 
 ;;;; Query processing with data fetching
 

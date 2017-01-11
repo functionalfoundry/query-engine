@@ -109,7 +109,68 @@
        :params {}
        :attrs [:component/name]
        :empty-cache? true}
-      {:component/name "Dislike Button"})))
+      {:component/name "Dislike Button"}
+
+      ;; Use deep parameterization to query the account that has a
+      ;; specific :db/id
+      {:viewer (resolve-id -10)
+       :entity 'account
+       :id (resolve-id -1)
+       :params {[:db/id] (resolve-id -1)}
+       :attrs [:db/id :account/name]
+       :empty-cache? true}
+      {:db/id (resolve-id -1)
+       :account/name "Company A"}
+
+      ;; Use deep parameterization to query the account that includes
+      ;; a component library with a specific :db/id
+      {:viewer (resolve-id -10)
+       :entity 'account
+       :id (resolve-id -1)
+       :params {[:account/libraries
+                 :db/id] (resolve-id -100)}
+       :attrs [:db/id :account/name]
+       :empty-cache? true}
+      {:db/id (resolve-id -1)
+       :account/name "Company A"}
+
+      ;; Use deep parameterization to query the account that includes
+      ;; a component library with a component that has a specific name
+      {:viewer (resolve-id -10)
+       :entity 'account
+       :id (resolve-id -1)
+       :params {[:account/libraries
+                 :component-library/components
+                 :component/name] "Like Button"}
+       :attrs [:db/id :account/name]
+       :empty-cache? true}
+      {:db/id (resolve-id -1)
+       :account/name "Company A"}
+
+      ;; Use deep parameterization to query the account that includes
+      ;; a component library with the given ID and that has the
+      ;; account name "Company A"
+      {:viewer (resolve-id -10)
+       :entity 'account
+       :id (resolve-id -1)
+       :params {[:account/libraries :db/id] (resolve-id -100)
+                :account/name "Company A"}
+       :attrs [:db/id :account/name]
+       :empty-cache? true}
+      {:db/id (resolve-id -1)
+       :account/name "Company A"}
+
+      ;; Use deep parameterization to query the account that includes
+      ;; a component library with the given ID and that has the
+      ;; account name "Company B"
+      {:viewer (resolve-id -10)
+       :entity 'account
+       :id (resolve-id -1)
+       :params {[:account/libraries :db/id] (resolve-id -100)
+                :account/name "Company B"}
+       :attrs [:db/id :account/name]
+       :empty-cache? true}
+      nil)))
 
 (defn test-fetch-many
   [{:keys [connect db data-layer transact resolve-tempid
@@ -248,7 +309,41 @@
                 :page/after-id (resolve-id -1002)
                 :page/count 3}
        :attrs [:db/id :component/name]}
-      [{:db/id (resolve-id -1000) :component/name "Shop Item"}])))
+      [{:db/id (resolve-id -1000) :component/name "Shop Item"}]
+
+      ;; Use deep parameterization to query users that belong
+      ;; to the account with the given :db/id
+      {:viewer (resolve-id -10)
+       :entity 'user
+       :ids (mapv resolve-id [-10 -11 -12 -13 -14])
+       :params {[:user/account :db/id] (resolve-id -1)}
+       :attrs [:user/name :user/account]
+       :empty-cache? true}
+      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}
+        {:user/name "Jeff" :user/account {:db/id (resolve-id -1)}}}
+
+      ;; Use deep parameterization to query users that belong
+      ;; to the account with the given account name
+      {:viewer (resolve-id -10)
+       :entity 'user
+       :ids (mapv resolve-id [-10 -11 -12 -13 -14])
+       :params {[:user/account :account/name] "Company A"}
+       :attrs [:user/name :user/account]
+       :empty-cache? true}
+      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}
+        {:user/name "Jeff" :user/account {:db/id (resolve-id -1)}}}
+
+      ;; Use deep parameterization to query users that belong
+      ;; to the account with the given account name and that
+      ;; have the user name "Joe"
+      {:viewer (resolve-id -10)
+       :entity 'user
+       :ids (mapv resolve-id [-10 -11 -12 -13 -14])
+       :params {[:user/account :account/name] "Company A"
+                :user/name "Joe"}
+       :attrs [:user/name :user/account]
+       :empty-cache? true}
+      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}})))
 
 (defn test-fetch-all
   [{:keys [connect db data-layer transact resolve-tempid
@@ -376,4 +471,34 @@
                 :page/after-id (resolve-id -1002)
                 :page/count 3}
        :attrs [:db/id :component/name]}
-      [{:db/id (resolve-id -1000) :component/name "Shop Item"}])))
+      [{:db/id (resolve-id -1000) :component/name "Shop Item"}]
+
+      ;; Use deep parameterization to query all users that belong
+      ;; to the account with the given :db/id
+      {:viewer (resolve-id -10)
+       :entity 'user
+       :params {[:user/account :db/id] (resolve-id -1)}
+       :attrs [:user/name :user/account]
+       :empty-cache? true}
+      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}
+        {:user/name "Jeff" :user/account {:db/id (resolve-id -1)}}}
+
+      ;; Use deep parameterization to query users that belong
+      ;; to the account with the given account name
+      {:viewer (resolve-id -10)
+       :entity 'user
+       :params {[:user/account :account/name] "Company A"}
+       :attrs [:user/name :user/account]}
+      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}
+        {:user/name "Jeff" :user/account {:db/id (resolve-id -1)}}}
+
+      ;; Use deep parameterization to query all users that belong
+      ;; to the account with the given account name and that
+      ;; have the user name "Joe"
+      {:viewer (resolve-id -10)
+       :entity 'user
+       :params {[:user/account :account/name] "Company A"
+                :user/name "Joe"}
+       :attrs [:user/name :user/account]
+       :empty-cache? true}
+      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}})))
