@@ -1,6 +1,7 @@
 (ns workflo.query-engine.data-layer.util
   (:refer-clojure :exclude [sort])
-  (:require [workflo.macros.entity.schema :as es]
+  (:require [clojure.string :as str]
+            [workflo.macros.entity.schema :as es]
             [workflo.query-engine.util :as util]))
 
 ;;;; Data fetching
@@ -50,44 +51,90 @@
 
 ;;; Rule generation from parameters
 
-(defn matches-param-rule
-  "Takes a param/value tuple and a rule name suffix. Returns a
-   `(matches-param-<suffix>? ?e)` rule that binds ?e to all entity
-   IDs that match the param/value pair.
+(defn- backref-attr?
+  "Returns true if `attr` is a backref symbol or keyword, i.e., its
+   name segment begins with an underscore."
+  [attr]
+  (let [ns (namespace attr)
+        nm (name attr)]
+    (str/starts-with? nm "_")))
 
-   Param may be either a single attribute name (e.g. `:db/id`) or
-   a vector of attributes (a path) (e.g. `[:account/users :db/id]`).
-   The latter generates a chain of Datalog clauses that traverse
-   the attribute path and match the final attribute against the
-   parameter's value."
+(defn- forward-attr
+  "Returns a keyword that represents the corresponding forward
+   attribute to the backref attribute `attr`. Essentially strips
+   off the underscore from the name segment."
+  [attr]
+  (let [ns (namespace attr)
+        nm (name attr)]
+    (if (str/starts-with? nm "_")
+      (keyword ns (subs nm 1))
+      (keyword ns nm))))
+
+(defn- attr-clause
+  "Creates a Datalog clause for an attribute. Takes in the name of
+   the previous (reference) variable, the attribute name and the
+   target var or value. If `attr` is a backref attribute, it will
+   convert it to a forward attribute and reverse `prev-var` and
+   `var-or-value` in the generated clause."
+  [prev-var attr var-or-value]
+  (cond
+    (= :db/id attr)      [`(~'= ~prev-var ~var-or-value)]
+    (backref-attr? attr) [var-or-value (forward-attr attr) prev-var]
+    :else                [prev-var attr var-or-value]))
+
+(defn validate-param
+  [param]
+  (when (vector? param)
+    (loop [attr (first param) path (rest param)]
+      (when-not (empty? path)
+        (if (= :db/id attr)
+          (throw (ex-info (str ":db/id must be the last item in a parameter path: " param)
+                          {:parameter-path param}))
+          (recur (first path) (rest path)))))))
+
+(defn- var-at-index
+  "Takes an index and returns a Datalog variable symbol `?var-<index>`."
+  [index]
+  (symbol (str "?var-" index)))
+
+(defn- path-vars
+  "Takes a path of attributes and returns as many Datalog variables as
+   there are attributes, with the first one being called `?e`. E.g. the
+   path `[:foo :bar :baz]` would result in `[?e ?var-1 ?var-2]`."
+  [path]
+  (into ['?e] (map var-at-index) (map inc (range (dec (count path))))))
+
+(defn- path-clauses
+  "Takes a path of attributes and a value. Returns attribute clauses
+   that lead from the Datalog variable ?e to the value via the
+   attributes.
+
+   Example: The path `[:foo :bar :baz]` and the value `1234` would
+   result in the following clauses:
+   ```
+   [?e :foo ?var-1]
+   [?var-1 :bar ?var-2]
+   [?var-2 :baz 1234]
+   ```"
+  [path value]
+  (let [vars (path-vars path)]
+    (map attr-clause vars path (conj (subvec vars 1) value))))
+
+(defn matches-param-rule
+  "Takes a parameter (can be an attribute path), a value and
+   a suffix for the Datalog rule to generate. Generates a
+   `(matches-param-<suffix>? ?e)` rule that matches all `?e`
+   that leads to `value` via the attribute(s) in `param`."
   [[param value] suffix]
-  (let [rule-name      (symbol (str "matches-param-" suffix "?"))
-        rule-signature `(~rule-name ~'?e)]
-    (into [rule-signature]
-          (cond
-            (vector? param)  (loop [exprs     []
-                                    attr      (first param)
-                                    path      (rest param)
-                                    prev-var  '?e
-                                    var-index 1]
-                               (if (empty? path)
-                                 (conj exprs (if (= :db/id attr)
-                                               [`(~'= ~prev-var ~value)]
-                                               [prev-var attr value]))
-                                 (let [var (symbol (name (str "?var-" var-index)))]
-                                   (recur (conj exprs [prev-var attr var])
-                                          (first path)
-                                          (rest path)
-                                          var
-                                          (inc var-index)))))
-            (= :db/id param) [[`(~'= ~'?e ~value)]]
-            :else            [['?e param value]]))))
+  (validate-param param)
+  (let [rule-name (symbol (str "matches-param-" suffix "?"))
+        path      (cond-> param (not (vector? param)) vector)]
+    (into [`(~rule-name ~'?e)] (path-clauses path value))))
 
 (defn matches-params-rules
   "Takes a parameter map (e.g. from a query) and generates a number
-   of Datalog rules to match entities against these parameters.
-
-   The entry point to these rules is the `(matches-params? ?e)` rule."
+   of Datalog rules to match entities against these parameters. The
+   entry point to these rules is the `(matches-params? ?e)` rule."
   [params]
   (let [param-rules (transduce
                      (comp (remove reserved-param?)
