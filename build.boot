@@ -34,8 +34,8 @@
                  [datascript "0.15.4" :scope "test"]
 
                  ;; Workflo
-                 [workflo/boot-tasks "0.1.8" :scope "test"]
-                 [workflo/macros "0.2.39"]])
+                 [workflo/boot-tasks "0.1.9" :scope "test"]
+                 [workflo/macros "0.2.41"]])
 
 (require '[adzerk.boot-test :as boot-test]
          '[environ.boot :refer [environ]]
