@@ -115,7 +115,16 @@
   ;; Join with an ident source
   (let [z (qz/query-zipper '{[:a _] [:b :c]})]
     (is (= '[:a _] (zip/node (qz/join-source z))))
-    (is (= [:b :c] (zip/node (qz/join-query z))))))
+    (is (= [:b :c] (zip/node (qz/join-query z)))))
+
+  ;; Recursive join is subtituted with the parent query
+  (let [z (qz/query-zipper '{[:a _] [:b {:c ...}]})]
+    (is (= '[:a _] (zip/node (qz/join-source z))))
+    (is (= '[:b {:c ...}] (zip/node (qz/join-query z))))
+    (is (= ':c (-> z qz/join-query qz/first-subquery qz/next-query
+                   qz/join-source zip/node)))
+    (is (= '[:b {:c ...}] (-> z qz/join-query qz/first-subquery
+                              qz/next-query qz/join-query zip/node)))))
 
 (deftest param-query-and-map
   ;; Param with a keyword query

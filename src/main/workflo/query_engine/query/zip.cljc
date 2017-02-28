@@ -125,7 +125,10 @@
 (defn join-query
   "Moves to the query of a join expression."
   [z]
-  (zip/right (zip/down (zip/down z))))
+  (let [join-query (zip/right (zip/down (zip/down z)))]
+    (cond-> join-query
+      (= (zip/node join-query) '...)
+      (-> parent-query parent-query parent-query))))
 
 (defn param-query
   "Moves to the query of a param expression."
