@@ -127,3 +127,21 @@
   (auth
     (or (= viewer-account component-account)
         public?)))
+
+;;;; Component tree
+
+(s/def :component-tree/root (t/entity-ref 'tree-component))
+
+(defentity component-tree
+  (spec
+    (s/keys :req [:db/id
+                  :component-tree/root])))
+
+(s/def :tree-component/component (t/entity-ref 'component))
+(s/def :tree-component/children (t/entity-ref 'tree-component :many? true))
+
+(defentity tree-component
+  (spec
+    (s/keys :req [:db/id
+                  :tree-component/component]
+            :opt [:tree-component/children])))

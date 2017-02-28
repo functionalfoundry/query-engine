@@ -114,6 +114,26 @@
     :component-state/name "Dislike Button Active"
     :component-state/component -1003}])
 
+;;;; Component trees
+
+(def component-trees
+  [{:db/id -20000
+    :component-tree/root -20100}])
+
+(def tree-components
+  [{:db/id -20100
+    :tree-component/component -1000
+    :tree-component/children [-20101 -20102]}
+   {:db/id -20101
+    :tree-component/component -1002
+    :tree-component/children [-20103]}
+   {:db/id -20102
+    :tree-component/component -1003
+    :tree-component/children []}
+   {:db/id -20103
+    :tree-component/component -1004
+    :tree-component/children []}])
+
 ;;;; All test data
 
 (def combined
@@ -121,7 +141,9 @@
           users
           component-libraries
           components
-          component-states))
+          component-states
+          component-trees
+          tree-components))
 
 ;;;; Datomic test data
 
@@ -162,4 +184,15 @@
                    (-> state
                        (update :db/id mktempid)
                        (update :component-state/component mktempid)))
-                 component-states))))
+                 component-states)
+            (map (fn [tree]
+                   (-> tree
+                       (update :db/id mktempid)
+                       (update :component-tree/root mktempid)))
+                 component-trees)
+            (map (fn [tree-component]
+                   (-> tree-component
+                       (update :db/id mktempid)
+                       (update :tree-component/component mktempid)
+                       (update :tree-component/children mktempids)))
+                 tree-components))))
