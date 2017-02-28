@@ -499,4 +499,27 @@
                  {[:user/account :account/name] "Company A"
                   :user/name "Linda"})]
        :viewer (resolve-id -10)}
-      {:users #{}})))
+      {:users #{}}
+
+      ;; Use a recursive query to obtain all components in a component tree
+      {:query `[({:component-tree
+                  [{:component-tree/root
+                    [:db/id
+                     {:tree-component/component [:component/name]}
+                     {:tree-component/children ...}]}]}
+                 {:db/id ~(resolve-id -20000)})]
+       :viewer (resolve-id -10)}
+      {:component-tree
+       {:component-tree/root
+        {:db/id (resolve-id -20100)
+         :tree-component/component {:component/name "Shop Item"}
+         :tree-component/children
+         #{{:db/id (resolve-id -20101)
+            :tree-component/component {:component/name "Like Button"}
+            :tree-component/children
+            #{{:db/id (resolve-id -20103)
+               :tree-component/component {:component/name "Seat Picker"}
+               :tree-component/children #{}}}}
+           {:db/id (resolve-id -20102)
+            :tree-component/component {:component/name "Dislike Button"}
+            :tree-component/children #{}}}}}})))
