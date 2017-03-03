@@ -196,3 +196,57 @@
                        (update :tree-component/component mktempid)
                        (update :tree-component/children mktempids)))
                  tree-components))))
+
+;;;; Map test data
+
+(def map-data
+  (letfn [(mktempid [id]
+            id)
+          (mktempid-reference [id]
+            {:db/id id})
+          (mktempid-references [ids]
+            (map mktempid-reference ids))]
+    (concat (map (fn [account]
+                   (-> account
+                       (update :db/id mktempid)
+                       (update :account/users mktempid-references)
+                       (update :account/libraries mktempid-references)))
+                 accounts)
+            (map (fn [user]
+                   (cond-> user
+                     true
+                     (update :db/id mktempid)
+
+                     (:user/account user)
+                     (update :user/account mktempid-reference)))
+                 users)
+            (map (fn [library]
+                   (-> library
+                       (update :db/id mktempid)
+                       (update :component-library/account mktempid-reference)
+                       (update :component-library/creator mktempid-reference)
+                       (update :component-library/components mktempid-references)))
+                 component-libraries)
+            (map (fn [component]
+                   (-> component
+                       (update :db/id mktempid)
+                       (update :component/account mktempid-reference)
+                       (update :component/creator mktempid-reference)
+                       (update :component/states mktempid-references)))
+                 components)
+            (map (fn [state]
+                   (-> state
+                       (update :db/id mktempid)
+                       (update :component-state/component mktempid-reference)))
+                 component-states)
+            (map (fn [tree]
+                   (-> tree
+                       (update :db/id mktempid)
+                       (update :component-tree/root mktempid-reference)))
+                 component-trees)
+            (map (fn [tree-component]
+                   (-> tree-component
+                       (update :db/id mktempid)
+                       (update :tree-component/component mktempid-reference)
+                       (update :tree-component/children mktempid-references)))
+                 tree-components))))
