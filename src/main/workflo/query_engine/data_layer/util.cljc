@@ -29,7 +29,7 @@
 
 ;;; Filtering
 
-(defn- reserved-param?
+(defn reserved-param?
   [[k v]]
   (some #{k} reserved-params))
 
