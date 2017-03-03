@@ -114,23 +114,3 @@
                           conj #{})
                (util/sort params)
                (util/paginate params)))))
-
-(comment
-
-  (require 'workflo.query-engine.test-map)
-
-  (def setup workflo.query-engine.test-map/setup)
-  (def db (let [conn ((:connect setup)) 
-                _    ((:transact setup) conn)]
-            ((:db setup) conn)))
-
-  (let [accounts (resolve-refs db :db/id 'account [{:db/id -1}])]
-    (println "\n------ BEGIN ------")
-    (resolve-path db :db/id 'account accounts [:account/users :account/_users :db/id]))
-
-  (fetch-entities {:db db}
-                  (entities/resolve-entity 'user)
-                  [-10 -11 -12]
-                  {[:user/account :db/id] -1})
-
-  )
