@@ -180,6 +180,4 @@
 
 ;;; Selecting attributes
 
-(defn select-attrs
-  [data attrs]
-  (select-keys data attrs))
+(def select-attrs select-keys)
