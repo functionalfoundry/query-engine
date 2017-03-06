@@ -14,6 +14,9 @@
 (defn id-attr [env]
   (get env :id-attr :db/id))
 
+(defn ref-id-attr [env]
+  (get env :ref-id-attr :db/id))
+
 ;;;; Working with entities
 
 (defn ref-entity
@@ -150,27 +153,25 @@
       (hook env parent-data join-query params)
       (if (query.util/backref-attr? key)
         (do
-          (assert (not (nil? (:db/id (zip/node parent-data))))
-                  (str "Cannot query backref " key " without "
-                       "a :db/id in parent data: " (zip/node parent-data)))
+          (assert (not (nil? (get (zip/node parent-data) (ref-id-attr env))))
+                  (str "Cannot query backref " key " without a " (ref-id-attr env)
+                       " in parent data: " (zip/node parent-data)))
           (let [backref   (backref (zip/node parent-data) key)
-                parent-id (:db/id (zip/node parent-data))
-                params    (assoc params (:forward-attr backref) parent-id)
+                parent-id (get (zip/node parent-data) (ref-id-attr env))
+                params    (assoc params [(:forward-attr backref) (ref-id-attr env)] parent-id)
                 singular? (not (:many? backref))
                 attrs     (attrs-from-query-root join-query)]
-            (fetch-entity-data env (:entity backref) singular? nil
-                               attrs params)))
+            (fetch-entity-data env (:entity backref) singular? nil attrs params)))
         (let [entity-ref  (entity-ref (zip/node parent-data) key)
               singular?   (not (:many? entity-ref))
               ref-or-refs (get (zip/node parent-data) key)
               id-or-ids   (if (map? ref-or-refs)
-                            (:db/id ref-or-refs)
+                            (get ref-or-refs (ref-id-attr env))
                             (if singular?
                               ref-or-refs
-                              (map :db/id ref-or-refs)))
+                              (map #(get % (ref-id-attr env)) ref-or-refs)))
               attrs       (attrs-from-query-root join-query)]
-          (fetch-entity-data (assoc env :id-attr :db/id)
-                             (:entity entity-ref) singular?
+          (fetch-entity-data env (:entity entity-ref) singular?
                              id-or-ids attrs params))))))
 
 (defn resolve-join
