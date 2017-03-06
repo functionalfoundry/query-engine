@@ -29,7 +29,7 @@
 
 ;;; Filtering
 
-(defn- reserved-param?
+(defn reserved-param?
   [[k v]]
   (some #{k} reserved-params))
 
@@ -180,6 +180,4 @@
 
 ;;; Selecting attributes
 
-(defn select-attrs
-  [data attrs]
-  (select-keys data attrs))
+(def select-attrs select-keys)

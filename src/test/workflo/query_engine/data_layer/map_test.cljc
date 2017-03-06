@@ -1,7 +1,7 @@
-(ns workflo.query-engine.data-layer.datascript-no-authorization-test
+(ns workflo.query-engine.data-layer.map-test
   (:require [clojure.test :refer [deftest]]
-            [workflo.query-engine.data-layer.no-authorization-common-test :as c]
-            [workflo.query-engine.test-datascript-no-authorization :refer [setup]]))
+            [workflo.query-engine.test-map :refer [setup]]
+            [workflo.query-engine.data-layer.no-authorization-common-test :as c]))
 
 ;;;; Fetch individual entities
 
