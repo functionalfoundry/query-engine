@@ -5,23 +5,30 @@
             [workflo.query-engine.data-layer :refer [DataLayer]]
             [workflo.query-engine.data-layer.util :as util]))
 
+(defn lookup-entity* [db entity-name id]
+  (get-in db [entity-name id]))
+
+(def lookup-entity (memoize lookup-entity*))
+
 (defn resolve-refs [db id-attr entity-name refs]
-  (into #{} (map (fn [ref]
-                   (get-in db [entity-name (id-attr ref)])))
+  (into #{} (map (comp (partial lookup-entity db entity-name)
+                       id-attr))
         refs))
 
 (defn backref-attr->forward-attr [k]
   (keyword (namespace k) (subs (name k) 1)))
 
-(defn resolve-backrefs [db id-attr backref forward-attr refs]
+(defn resolve-backrefs* [db id-attr backref forward-attr refs]
   (into #{} (filter (fn [source-data]
                       (when-let [ref-or-refs (get source-data forward-attr)]
-                        (if (:many? backref)
-                          (some (into #{} (map id-attr ref-or-refs))
-                                (map id-attr refs))
-                          (some #{(id-attr ref)}
-                                (map id-attr refs))))))
+                        (if (find ref-or-refs id-attr)
+                          (some #{(id-attr ref-or-refs)} (map id-attr refs))
+                          (some (into #{} (map id-attr ref-or-refs)) (map id-attr refs))))))
         (vals (get db (:entity backref)))))
+
+(def resolve-backrefs (memoize resolve-backrefs*))
+(def entity-refs (memoize entities/entity-refs))
+(def entity-backrefs (memoize entities/entity-backrefs))
 
 (defn resolve-path [db id-attr entity data-set path]
   (loop [data-entity (:name entity)
@@ -32,9 +39,9 @@
       (let [attr            (first path)
             forward-attr    (backref-attr->forward-attr attr)
             entity-refs     (when-not (query.util/backref-attr? attr)
-                              (entities/entity-refs data-entity))
+                              (entity-refs data-entity))
             entity-backrefs (when (query.util/backref-attr? attr)
-                              (entities/entity-backrefs data-entity))
+                              (entity-backrefs data-entity))
             attr-ref        (get entity-refs attr)
             attr-backref    (get entity-backrefs forward-attr)]
         (cond
@@ -68,49 +75,33 @@
 
 (defn fetch-one-by-id
   [{:keys [db id-attr] :or {id-attr :db/id} :as env} entity id params]
-  (when-let [data (get-in db [(:name entity) id])]
-    (when (matches-params? db id-attr entity data (remove util/reserved-param? params))
-      data)))
+  (when-let [data (lookup-entity db (:name entity) id)]
+    (when (matches-params? db id-attr entity data params)
+      (with-meta data {:entity entity}))))
 
 (defn fetch-entity
-  [{:keys [cache] :as env} entity id params]
-  (letfn [(fetch* [id]
-            (fetch-one-by-id env entity id params))]
-    (if cache
-      (c/get-one cache id fetch*)
-      (fetch* id))))
+  [env entity id params]
+  (fetch-one-by-id env entity id params))
 
 (defn fetch-entities
   ([{:keys [db] :as env} entity params]
    (let [ids (keys (get db (:name entity)))]
      (fetch-entities env entity ids params)))
-  ([{:keys [cache id-attr] :or {id-attr :db/id} :as env} entity ids params]
-   (letfn [(fetch* [ids]
-             (keep #(fetch-one-by-id env entity % params) ids))]
-     (if cache
-       (c/get-many cache ids
-                   (fn [missing-ids]
-                     (into {} (map (juxt id-attr identity))
-                           (fetch* missing-ids))))
-       (fetch* ids)))))
+  ([env entity ids params]
+   (keep #(fetch-one-by-id env entity % params) ids)))
 
 (defn data-layer []
   (reify DataLayer
     (fetch-one [_ env entity id params attrs]
-      (some-> (fetch-entity env entity id params)
-              (util/select-attrs attrs)
-              (with-meta {:entity entity})))
+      (some-> (fetch-entity env entity id (remove util/reserved-param? params))
+              (util/select-attrs attrs)))
     (fetch-many [_ env entity ids params attrs]
-      (some->> (fetch-entities env entity ids params)
-               (transduce (comp (map #(util/select-attrs % attrs))
-                                (map #(with-meta % {:entity entity})))
-                          conj #{})
+      (some->> (fetch-entities env entity ids (remove util/reserved-param? params))
+               (into #{} (map #(util/select-attrs % attrs)))
                (util/sort params)
                (util/paginate params)))
     (fetch-all [_ env entity params attrs]
-      (some->> (fetch-entities env entity params)
-               (transduce (comp (map #(util/select-attrs % attrs))
-                                (map #(with-meta % {:entity entity})))
-                          conj #{})
+      (some->> (fetch-entities env entity (remove util/reserved-param? params))
+               (into #{} (map #(util/select-attrs % attrs)))
                (util/sort params)
                (util/paginate params)))))
