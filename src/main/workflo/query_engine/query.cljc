@@ -171,8 +171,11 @@
                               ref-or-refs
                               (map #(get % (ref-id-attr env)) ref-or-refs)))
               attrs       (attrs-from-query-root join-query)]
-          (fetch-entity-data env (:entity entity-ref) singular?
-                             id-or-ids attrs params))))))
+          (cond
+            (and singular? (not id-or-ids)) nil
+            (and (not singular?) (empty? id-or-ids)) #{}
+            :else (fetch-entity-data env (:entity entity-ref) singular?
+                                     id-or-ids attrs params)))))))
 
 (defn resolve-join
   "Resolves a join query into data given a parent data node
