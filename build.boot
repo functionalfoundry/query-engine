@@ -13,29 +13,29 @@
  :resource-paths #{"src/main"}
  :repositories #(concat % +repositories+)
  :dependencies '[;; Boot
-                 [adzerk/boot-cljs "1.7.228-2" :scope "test"]
-                 [adzerk/boot-test "1.1.2" :scope "test"]
+                 [adzerk/boot-cljs "2.0.0" :scope "test"]
+                 [adzerk/boot-test "1.2.0" :scope "test"]
                  [boot-environ "1.1.0" :scope "test"]
-                 [boot-codox "0.10.1" :scope "test"]
+                 [boot-codox "0.10.3" :scope "test"]
 
                  ;; Core
-                 [org.clojure/clojure "1.9.0-alpha11"]
-                 [org.clojure/clojurescript "1.9.293"]
+                 [org.clojure/clojure "1.9.0-alpha15"]
+                 [org.clojure/clojurescript "1.9.495"]
 
                  ;; General
-                 [inflections "0.12.2"]
+                 [inflections "0.13.0"]
                  [environ "1.1.0"]
 
                  ;; Data layers
-                 [com.datomic/datomic-free "0.9.5407"
+                 [com.datomic/datomic-free "0.9.5561"
                   :exclusions [com.google.guava/guava]
                   :scope "test"]
                  [datomic-schema "1.3.0" :scope "test"]
-                 [datascript "0.15.4" :scope "test"]
+                 [datascript "0.15.5" :scope "test"]
 
                  ;; Workflo
                  [workflo/boot-tasks "0.1.9" :scope "test"]
-                 [workflo/macros "0.2.43"]])
+                 [workflo/macros "0.2.45"]])
 
 (require '[adzerk.boot-test :as boot-test]
          '[environ.boot :refer [environ]]
