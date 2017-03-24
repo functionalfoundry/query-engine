@@ -31,14 +31,15 @@
               (if skip-authorization?
                 (d/q '[:find (pull ?e [*]) .
                        :in $ ?id-attr ?id ?entity %
-                       :where (matches-params? ?e)]
+                       :where [?e ?id-attr ?id]
+                              (matches-params? ?e)]
                      db id-attr id
                      (util/matches-params-rules* params))
                 (d/q '[:find (pull ?e [*]) .
                        :in $ ?id-attr ?id ?entity ?viewer ?authorized %
                        :where [?e ?id-attr ?id]
                               (matches-params? ?e)
-                              [(?authorized $ ?entity ?e ?viewer)]]
+                              [(?authorized $ ?entity ?id ?viewer)]]
                      db id-attr id entity viewer authorized?
                      (util/matches-params-rules* params)))))]
     (if cache
@@ -52,18 +53,32 @@
    (let [req-attrs (remove #{:db/id} (es/required-keys entity))
          rules     (conj (util/matches-params-rules* params)
                          (util/has-entity-attrs-rule req-attrs))
-         entities  (if skip-authorization?
-                     (d/q '[:find [(pull ?e [*]) ...]
-                            :in $ %
-                            :where (matches-params? ?e)
-                                   (has-entity-attrs? ?e)]
-                          db rules)
-                     (d/q '[:find [(pull ?e [*]) ...]
-                            :in $ ?entity ?viewer ?authorized %
-                            :where (matches-params? ?e)
-                                   (has-entity-attrs? ?e)
-                                   [(?authorized $ ?entity ?e ?viewer)]]
-                          db entity viewer authorized? rules))]
+         entities  (if (= :db/id id-attr)
+                     (if skip-authorization?
+                       (d/q '[:find [(pull ?e [*]) ...]
+                              :in $ %
+                              :where (matches-params? ?e)
+                                     (has-entity-attrs? ?e)]
+                            db rules)
+                       (d/q '[:find [(pull ?e [*]) ...]
+                              :in $ ?entity ?viewer ?authorized %
+                              :where (matches-params? ?e)
+                                     (has-entity-attrs? ?e)
+                                     [(?authorized $ ?entity ?e ?viewer)]]
+                            db entity viewer authorized? rules))
+                     (if skip-authorization?
+                       (d/q '[:find [(pull ?e [*]) ...]
+                              :in $ %
+                              :where (matches-params? ?e)
+                                     (has-entity-attrs? ?e)]
+                            db rules)
+                       (d/q '[:find [(pull ?e [*]) ...]
+                              :in $ ?id-attr ?entity ?viewer ?authorized %
+                              :where (matches-params? ?e)
+                                     (has-entity-attrs? ?e)
+                                     [?e ?id-attr ?id]
+                                     [(?authorized $ ?entity ?id ?viewer)]]
+                            db id-attr entity viewer authorized? rules)))]
      (when (and cache (seq entities))
        (c/set-many cache (into {} (map (juxt id-attr identity)) entities)))
      entities))
@@ -95,7 +110,7 @@
                         :in $ ?id-attr [?id ...] ?entity ?viewer ?authorized %
                         :where [?e ?id-attr ?id]
                                (matches-params? ?e)
-                               [(?authorized $ ?entity ?e ?viewer)]]
+                               [(?authorized $ ?entity ?id ?viewer)]]
                       db id-attr ids entity viewer authorized?
                       (util/matches-params-rules* params)))))]
      (if cache

@@ -38,7 +38,7 @@
                        :where [?e ?id-attr ?id]
                               (matches-params? ?e)
                               [(workflo.query-engine.data-layer.datomic/authorized?
-                                $ ?entity ?e ?viewer)]]
+                                $ ?entity ?id ?viewer)]]
                      db id-attr id entity viewer
                      (util/matches-params-rules* params)))))]
     (if cache
@@ -46,26 +46,45 @@
       (fetch* id))))
 
 (defn- fetch-entities
-  ([{:keys [db skip-authorization? viewer]
+  ([{:keys [db id-attr skip-authorization? viewer]
+     :or {id-attr :db/id}
      :as env} entity params]
    (let [req-attrs (remove #{:db/id} (es/required-keys entity))
          rules     (conj (util/matches-params-rules* params)
                          (util/has-entity-attrs-rule req-attrs))
-         ids       (if skip-authorization?
-                     (d/q '[:find [?e ...]
-                            :in $ [?a ...] %
-                            :where [?e ?a]
-                                   (matches-params? ?e)
-                                   (has-entity-attrs? ?e)]
-                          db req-attrs rules)
-                     (d/q '[:find [?e ...]
-                            :in $ [?a ...] ?entity ?viewer %
-                            :where [?e ?a]
-                                   (matches-params? ?e)
-                                   (has-entity-attrs? ?e)
-                                   [(workflo.query-engine.data-layer.datomic/authorized?
-                                     $ ?entity ?e ?viewer)]]
-                          db req-attrs entity viewer rules))]
+         ids       (if (= :db/id id-attr)
+                     (if skip-authorization?
+                       (d/q '[:find [?e ...]
+                              :in $ [?a ...] %
+                              :where [?e ?a]
+                                     (matches-params? ?e)
+                                     (has-entity-attrs? ?e)]
+                            db req-attrs rules)
+                       (d/q '[:find [?e ...]
+                              :in $ [?a ...] ?entity ?viewer %
+                              :where [?e ?a]
+                                     (matches-params? ?e)
+                                     (has-entity-attrs? ?e)
+                                     [(workflo.query-engine.data-layer.datomic/authorized?
+                                       $ ?entity ?e ?viewer)]]
+                            db req-attrs entity viewer rules))
+                     (if skip-authorization?
+                       (d/q '[:find [?id ...]
+                              :in $ ?id-attr [?a ...] %
+                              :where [?e ?id-attr ?id]
+                                     [?e ?a]
+                                     (matches-params? ?e)
+                                     (has-entity-attrs? ?e)]
+                            db id-attr req-attrs rules)
+                       (d/q '[:find [?id ...]
+                              :in $ ?id-attr [?a ...] ?entity ?viewer %
+                              :where [?e ?id-attr ?id]
+                                     [?e ?a]
+                                     (matches-params? ?e)
+                                     (has-entity-attrs? ?e)
+                                     [(workflo.query-engine.data-layer.datomic/authorized?
+                                       $ ?entity ?id ?viewer)]]
+                            db id-attr req-attrs entity viewer rules)))]
      (fetch-entities env entity ids params)))
   ([{:keys [cache db id-attr skip-authorization? viewer]
      :or {id-attr :db/id}
@@ -93,7 +112,7 @@
                         :where [?e ?id-attr ?id]
                                (matches-params? ?e)
                                [(workflo.query-engine.data-layer.datomic/authorized?
-                                 $ ?entity ?e ?viewer)]]
+                                 $ ?entity ?id ?viewer)]]
                       db id-attr ids entity viewer
                       (util/matches-params-rules* params)))))]
      (if cache
