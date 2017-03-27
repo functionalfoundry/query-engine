@@ -21,13 +21,14 @@
 
 (defn ref-entity
   [source attr attr-ref]
-  (try
-    (e/resolve-entity (:entity attr-ref))
-    (catch #?(:cljs js/Error :clj Exception) e
-        (let [err-msg (str "Failed to resolve entity for attribute "
-                           attr " in data: " source)]
-          (throw #?(:cljs (js/Error. err-msg)
-                    :clj (Exception. err-msg)))))))
+  (when (and attr-ref (:entity attr-ref))
+    (try
+      (e/resolve-entity (:entity attr-ref))
+      (catch #?(:cljs js/Error :clj Exception) e
+          (let [err-msg (str "Failed to resolve entity for attribute "
+                             attr " in data: " source)]
+            (throw #?(:cljs (js/Error. err-msg)
+                      :clj (Exception. err-msg))))))))
 
 (defn backref-attr->forward-attrs
   [k]
@@ -173,6 +174,7 @@
                               (map #(get % (ref-id-attr env)) ref-or-refs)))
               attrs       (attrs-from-query-root join-query)]
           (cond
+            (not entity-ref) ref-or-refs
             (and singular? (not id-or-ids)) nil
             (and (not singular?) (empty? id-or-ids)) #{}
             :else (fetch-entity-data (assoc env :following-ref? true)
