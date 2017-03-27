@@ -79,7 +79,7 @@
   "Fetches one or more items of an entity from the data layer."
   [env entity singular? id-or-ids attrs params]
   (let [env   (select-keys env [:cache :data-layer :db :id-attr :ref-id-attr
-                                :viewer :skip-authorization?])
+                                :following-ref? :viewer :skip-authorization?])
         attrs (if (seq attrs) attrs [(id-attr env)])]
     (if singular?
       (if-let [id (or id-or-ids (get params (id-attr env)))]
@@ -161,7 +161,8 @@
                 params    (assoc params [(:forward-attr backref) (ref-id-attr env)] parent-id)
                 singular? (not (:many? backref))
                 attrs     (attrs-from-query-root join-query)]
-            (fetch-entity-data env (:entity backref) singular? nil attrs params)))
+            (fetch-entity-data (assoc env :following-ref? true)
+                               (:entity backref) singular? nil attrs params)))
         (let [entity-ref  (entity-ref (zip/node parent-data) key)
               singular?   (not (:many? entity-ref))
               ref-or-refs (get (zip/node parent-data) key)
@@ -174,7 +175,8 @@
           (cond
             (and singular? (not id-or-ids)) nil
             (and (not singular?) (empty? id-or-ids)) #{}
-            :else (fetch-entity-data env (:entity entity-ref) singular?
+            :else (fetch-entity-data (assoc env :following-ref? true)
+                                     (:entity entity-ref) singular?
                                      id-or-ids attrs params)))))))
 
 (defn resolve-join
