@@ -7,114 +7,295 @@
             [workflo.query-engine.data-layer.util :as util]))
 
 (defn authorized?
-  [db entity entity-id viewer-id]
-  (entities/authorized? entity {:db db} entity-id viewer-id))
+  [db entity entity-id viewer-id skip-authorization?]
+  (or skip-authorization?
+      (entities/authorized? entity {:db db} entity-id viewer-id)))
 
 (defn- fetch-entity
-  [{:keys [db cache id-attr skip-authorization? viewer]
-    :or {id-attr :db/id}
+  [{:keys [db cache following-ref? id-attr ref-id-attr skip-authorization? viewer]
+    :or {id-attr :db/id
+         ref-id-attr :db/id
+         skip-authorization? false}
     :as env} entity id params]
   (letfn [(fetch* [id]
-            (if (= :db/id id-attr)
-              (if skip-authorization?
+            (if following-ref?
+              (cond
+                (and (= :db/id id-attr)
+                     (= :db/id ref-id-attr))
                 (d/q '[:find (pull ?e [*]) .
-                       :in $ ?e %
-                       :where (matches-params? ?e)]
-                     db id (util/matches-params-rules* params))
-                (d/q '[:find (pull ?e [*]) .
-                       :in $ ?e ?entity ?viewer %
+                       :in $
+                           ?e
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
                        :where (matches-params? ?e)
                               [(workflo.query-engine.data-layer.datomic/authorized?
-                                $ ?entity ?e ?viewer)]]
-                     db id entity viewer (util/matches-params-rules* params)))
-              (if skip-authorization?
+                                $ ?entity ?e ?viewer ?skip-authorization)]]
+                     db id entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
+                     (util/matches-params-rules* params))
+
+                (and (= :db/id id-attr)
+                     (not= :db/id ref-id-attr))
                 (d/q '[:find (pull ?e [*]) .
-                       :in $ ?id-attr ?id %
-                       :where [?e ?id-attr ?id]
-                              (matches-params? ?e)]
-                     db id-attr id (util/matches-params-rules* params))
+                       :in $
+                           ?ref-id-attr
+                           ?ref-id
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
+                       :where [?e ?ref-id-attr ?ref-id]
+                              (matches-params? ?e)
+                              [(workflo.query-engine.data-layer.datomic/authorized?
+                                $ ?entity ?e ?viewer ?skip-authorization)]]
+                     db ref-id-attr id entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
+                     (util/matches-params-rules* params))
+
+                (and (not= :db/id id-attr)
+                     (= :db/id ref-id-attr))
                 (d/q '[:find (pull ?e [*]) .
-                       :in $ ?id-attr ?id ?entity ?viewer %
+                       :in $
+                           ?id-attr
+                           ?e
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
                        :where [?e ?id-attr ?id]
                               (matches-params? ?e)
                               [(workflo.query-engine.data-layer.datomic/authorized?
-                                $ ?entity ?id ?viewer)]]
-                     db id-attr id entity viewer
+                                $ ?entity ?id ?viewer ?skip-authorization)]]
+                     db id-attr id entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
+                     (util/matches-params-rules* params))
+
+                (and (not= :db/id id-attr)
+                     (not= :db/id ref-id-attr))
+                (d/q '[:find (pull ?e [*]) .
+                       :in $
+                           ?id-attr
+                           ?ref-id-attr
+                           ?ref-id
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
+                       :where [?e ?ref-id-attr ?ref-id]
+                              [?e ?id-attr ?id]
+                              (matches-params? ?e)
+                              [(workflo.query-engine.data-layer.datomic/authorized?
+                                $ ?entity ?id ?viewer ?skip-authorization)]]
+                     db id-attr ref-id-attr id entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
+                     (util/matches-params-rules* params)))
+              (cond
+                (= :db/id id-attr)
+                (d/q '[:find (pull ?e [*]) .
+                       :in $
+                           ?e
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
+                       :where (matches-params? ?e)
+                              [(workflo.query-engine.data-layer.datomic/authorized?
+                                $ ?entity ?e ?viewer ?skip-authorization)]]
+                     db id entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
+                     (util/matches-params-rules* params))
+
+                (not= :db/id id-attr)
+                (d/q '[:find (pull ?e [*]) .
+                       :in $
+                           ?id-attr
+                           ?id
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
+                       :where [?e ?id-attr ?id]
+                              (matches-params? ?e)
+                              [(workflo.query-engine.data-layer.datomic/authorized?
+                                $ ?entity ?id ?viewer ?skip-authorization)]]
+                     db id-attr id entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
                      (util/matches-params-rules* params)))))]
     (if cache
       (c/get-one cache id fetch*)
       (fetch* id))))
 
 (defn- fetch-entities
-  ([{:keys [db id-attr skip-authorization? viewer]
-     :or {id-attr :db/id}
+  ([{:keys [db following-ref? id-attr ref-id-attr skip-authorization? viewer]
+     :or {id-attr :db/id
+          ref-id-attr :db/id
+          skip-authorization? false}
      :as env} entity params]
    (let [req-attrs (remove #{:db/id} (es/required-keys entity))
          rules     (conj (util/matches-params-rules* params)
                          (util/has-entity-attrs-rule req-attrs))
-         ids       (if (= :db/id id-attr)
-                     (if skip-authorization?
-                       (d/q '[:find [?e ...]
-                              :in $ [?a ...] %
-                              :where [?e ?a]
-                                     (matches-params? ?e)
-                                     (has-entity-attrs? ?e)]
-                            db req-attrs rules)
-                       (d/q '[:find [?e ...]
-                              :in $ [?a ...] ?entity ?viewer %
-                              :where [?e ?a]
-                                     (matches-params? ?e)
-                                     (has-entity-attrs? ?e)
-                                     [(workflo.query-engine.data-layer.datomic/authorized?
-                                       $ ?entity ?e ?viewer)]]
-                            db req-attrs entity viewer rules))
-                     (if skip-authorization?
-                       (d/q '[:find [?id ...]
-                              :in $ ?id-attr [?a ...] %
-                              :where [?e ?id-attr ?id]
-                                     [?e ?a]
-                                     (matches-params? ?e)
-                                     (has-entity-attrs? ?e)]
-                            db id-attr req-attrs rules)
-                       (d/q '[:find [?id ...]
-                              :in $ ?id-attr [?a ...] ?entity ?viewer %
-                              :where [?e ?id-attr ?id]
-                                     [?e ?a]
-                                     (matches-params? ?e)
-                                     (has-entity-attrs? ?e)
-                                     [(workflo.query-engine.data-layer.datomic/authorized?
-                                       $ ?entity ?id ?viewer)]]
-                            db id-attr req-attrs entity viewer rules)))]
+         ids       (cond
+                     (= :db/id id-attr)
+                     (d/q '[:find [?e ...]
+                            :in $
+                                [?a ...]
+                                ?entity
+                                ?viewer
+                                ?skip-authorization
+                                %
+                            :where [?e ?a]
+                                   (matches-params? ?e)
+                                   (has-entity-attrs? ?e)
+                                   [(workflo.query-engine.data-layer.datomic/authorized?
+                                     $ ?entity ?e ?viewer ?skip-authorization)]]
+                          db req-attrs entity
+                          (if skip-authorization? :undefined viewer)
+                          skip-authorization? rules)
+
+                     (not= :db/id id-attr)
+                     (d/q '[:find [?id ...]
+                            :in $
+                                ?id-attr
+                                [?a ...]
+                                ?entity
+                                ?viewer
+                                ?skip-authorization
+                                %
+                            :where [?e ?id-attr ?id]
+                                   [?e ?a]
+                                   (matches-params? ?e)
+                                   (has-entity-attrs? ?e)
+                                   [(workflo.query-engine.data-layer.datomic/authorized?
+                                     $ ?entity ?id ?viewer ?skip-authorization)]]
+                          db id-attr req-attrs entity
+                          (if skip-authorization? :undefined viewer)
+                          skip-authorization? rules))]
      (fetch-entities env entity ids params)))
-  ([{:keys [cache db id-attr skip-authorization? viewer]
-     :or {id-attr :db/id}
+  ([{:keys [cache db following-ref? id-attr ref-id-attr skip-authorization? viewer]
+     :or {id-attr :db/id
+          ref-id-attr :db/id
+          skip-authorization? false}
      :as env} entity ids params]
    (letfn [(fetch* [ids]
-             (if (= :db/id id-attr)
-               (if skip-authorization?
-                 (d/q '[:find [(pull ?e [*]) ...]
-                        :in $ [?e ...] %
-                        :where (matches-params? ?e)]
-                      db ids (util/matches-params-rules* params))
-                 (d/q '[:find [(pull ?e [*]) ...]
-                        :in $ [?e ...] ?entity ?viewer %
-                        :where (matches-params? ?e)
-                               [(workflo.query-engine.data-layer.datomic/authorized?
-                                 $ ?entity ?e ?viewer)]]
-                      db ids entity viewer (util/matches-params-rules* params)))
-               (if skip-authorization?
-                 (d/q '[:find [(pull ?e [*]) ...]
-                        :in $ ?id-attr [?id ...] %
-                        :where [?e ?id-attr ?id]]
-                      db id-attr ids (util/matches-params-rules* params))
-                 (d/q '[:find [(pull ?e [*]) ...]
-                        :in $ ?id-attr [?id ...] ?entity ?viewer %
-                        :where [?e ?id-attr ?id]
-                               (matches-params? ?e)
-                               [(workflo.query-engine.data-layer.datomic/authorized?
-                                 $ ?entity ?id ?viewer)]]
-                      db id-attr ids entity viewer
-                      (util/matches-params-rules* params)))))]
+             (if following-ref?
+               (cond
+                (and (= :db/id id-attr)
+                     (= :db/id ref-id-attr))
+                (d/q '[:find [(pull ?e [*]) ...]
+                       :in $
+                           [?e ...]
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
+                       :where (matches-params? ?e)
+                              [(workflo.query-engine.data-layer.datomic/authorized?
+                                $ ?entity ?e ?viewer ?skip-authorization)]]
+                     db ids entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
+                     (util/matches-params-rules* params))
+
+                (and (= :db/id id-attr)
+                     (not= :db/id ref-id-attr))
+                (d/q '[:find [(pull ?e [*]) ...]
+                       :in $
+                           ?ref-id-attr
+                           [?ref-id ...]
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
+                       :where [?e ?ref-id-attr ?ref-id]
+                              (matches-params? ?e)
+                              [(workflo.query-engine.data-layer.datomic/authorized?
+                                $ ?entity ?e ?viewer ?skip-authorization)]]
+                     db ref-id-attr ids entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
+                     (util/matches-params-rules* params))
+
+                (and (not= :db/id id-attr)
+                     (= :db/id ref-id-attr))
+                (d/q '[:find [(pull ?e [*]) ...]
+                       :in $
+                           ?id-attr
+                           [?e ...]
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
+                       :where [?e ?id-attr ?id]
+                              (matches-params? ?e)
+                              [(workflo.query-engine.data-layer.datomic/authorized?
+                                $ ?entity ?id ?viewer ?skip-authorization)]]
+                     db id-attr ids entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
+                     (util/matches-params-rules* params))
+
+                (and (not= :db/id id-attr)
+                     (not= :db/id ref-id-attr))
+                (d/q '[:find [(pull ?e [*]) ...]
+                       :in $
+                           ?id-attr
+                           ?ref-id-attr
+                           [?ref-id ...]
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
+                       :where [?e ?ref-id-attr ?ref-id]
+                              [?e ?id-attr ?id]
+                              (matches-params? ?e)
+                              [(workflo.query-engine.data-layer.datomic/authorized?
+                                $ ?entity ?id ?viewer ?skip-authorization)]]
+                     db id-attr ref-id-attr ids entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
+                     (util/matches-params-rules* params)))
+              (cond
+                (= :db/id id-attr)
+                (d/q '[:find [(pull ?e [*]) ...]
+                       :in $
+                           [?e ...]
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
+                       :where (matches-params? ?e)
+                              [(workflo.query-engine.data-layer.datomic/authorized?
+                                $ ?entity ?e ?viewer ?skip-authorization)]]
+                     db ids entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
+                     (util/matches-params-rules* params))
+
+                (not= :db/id id-attr)
+                (d/q '[:find [(pull ?e [*]) ...]
+                       :in $
+                           ?id-attr
+                           [?id ...]
+                           ?entity
+                           ?viewer
+                           ?skip-authorization
+                           %
+                       :where [?e ?id-attr ?id]
+                              (matches-params? ?e)
+                              [(workflo.query-engine.data-layer.datomic/authorized?
+                                $ ?entity ?id ?viewer ?skip-authorization)]]
+                     db id-attr ids entity
+                     (if skip-authorization? :undefined viewer)
+                     skip-authorization?
+                     (util/matches-params-rules* params)))))]
      (if cache
        (c/get-many cache ids
                    (fn [missing-ids]
