@@ -178,7 +178,7 @@
                           db id-attr req-attrs entity
                           (if skip-authorization? :undefined viewer)
                           skip-authorization? rules))]
-     (fetch-entities env entity ids params)))
+     (fetch-entities (assoc env :ref-id-attr id-attr) entity ids params)))
   ([{:keys [cache db following-ref? id-attr ref-id-attr skip-authorization? viewer]
      :or {id-attr :db/id
           ref-id-attr :db/id
