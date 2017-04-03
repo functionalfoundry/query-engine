@@ -169,10 +169,10 @@
                                 ?viewer
                                 ?skip-authorization
                                 %
-                            :where [?e ?id-attr ?id]
-                                   [?e ?a]
+                            :where [?e ?a]
                                    (matches-params? ?e)
                                    (has-entity-attrs? ?e)
+                                   [?e ?id-attr ?id]
                                    [(workflo.query-engine.data-layer.datomic/authorized?
                                      $ ?entity ?id ?viewer ?skip-authorization)]]
                           db id-attr req-attrs entity
