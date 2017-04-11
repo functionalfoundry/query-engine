@@ -65,7 +65,9 @@
         result-set (resolve-path db id-attr entity [data] path)]
     (and (seq result-set)
          (some (fn [result-value]
-                 (= result-value value))
+                 (or (= result-value value)
+                     (and (set? value)
+                          (some #{result-value} value))))
                result-set))))
 
 (defn matches-params? [db id-attr entity data params]
