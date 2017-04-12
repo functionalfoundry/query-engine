@@ -1,12 +1,10 @@
 (ns workflo.query-engine.query
   (:require [clojure.string :as string]
-            [clojure.zip :as zip]
             [inflections.core :as inflections]
             [workflo.macros.entity :as e]
             [workflo.macros.query.util :as query.util]
             [workflo.query-engine.data-layer :as data-layer]
-            [workflo.query-engine.query.data-zip :as dz]
-            [workflo.query-engine.query.zip :as qz]
+            [workflo.query-engine.query.process :as p]
             [workflo.query-engine.util :as util]))
 
 ;;;; Helpers
@@ -100,12 +98,12 @@
 
 (defn resolve-keyword
   "Resolves a toplevel keyword query into data."
-  [env opts parent-data z params]
-  (let [key (qz/dispatch-key z)]
+  [env opts parent-data q parent-qs params]
+  (let [key (p/dispatch-key q)]
     (if-let [hook (get (:query-hooks opts) key)]
-      (hook env parent-data z params)
-      (when (qz/toplevel? z)
-        (let [key (qz/dispatch-key z)
+      (hook env parent-data q parent-qs params)
+      (when (p/toplevel? q parent-qs)
+        (let [key (p/dispatch-key q)
               entity (util/memoized-entity-from-query-key key)]
           (fetch-entity-data env entity
                              (singular-key? key)
@@ -113,9 +111,9 @@
 
 (defn resolve-ident
   "Resolves an ident query into data."
-  [env opts z attrs params]
-  (let [key (zip/node (qz/ident-name z))
-        value (zip/node (qz/ident-value z))
+  [env opts q parent-qs attrs params]
+  (let [key (p/ident-name q)
+        value (p/ident-value q)
         entity (util/memoized-entity-from-query-key key)]
     (fetch-entity-data env entity true
                        (when (not= value '_) value)
@@ -123,22 +121,18 @@
 
 (defn attrs-from-query-root
   "Extract attributes from a query root expression."
-  [z]
-  (loop [subz (qz/first-subquery z) attrs []]
-    (let [new-attrs (conj attrs (qz/dispatch-key subz))]
-      (if (qz/last-query? subz)
-        new-attrs
-        (recur (qz/next-query subz) new-attrs)))))
+  [q]
+  (map p/dispatch-key q))
 
 (defn resolve-toplevel-join
   "Resolves a toplevel join query (where no parent entity
    exists and our convention is to perform the join on
    all items of an entity (denoted by the query join
    source key)."
-  [env opts join-source join-query params]
-  (let [key (qz/dispatch-key join-source)]
+  [env opts join-source join-query parent-qs params]
+  (let [key (p/dispatch-key join-source)]
     (if-let [hook (get (:query-hooks opts) key)]
-      (hook env nil join-query params)
+      (hook env nil join-query parent-qs params)
       (let [entity (util/memoized-entity-from-query-key key)
             attrs (attrs-from-query-root join-query)]
         (fetch-entity-data env entity (singular-key? key)
@@ -148,25 +142,25 @@
 (defn resolve-nested-join
   "Resolves a nested join query (starting from a parent entity
    map) into data."
-  [env opts parent-data join-source join-query params]
-  (let [key (qz/dispatch-key join-source)]
+  [env opts parent-data join-source join-query parent-qs params]
+  (let [key (p/dispatch-key join-source)]
     (if-let [hook (get (:query-hooks opts) key)]
-      (hook env parent-data join-query params)
+      (hook env parent-data join-query parent-qs params)
       (if (query.util/backref-attr? key)
         (do
-          (assert (not (nil? (get (zip/node parent-data) (ref-id-attr env))))
+          (assert (not (nil? (get parent-data (ref-id-attr env))))
                   (str "Cannot query backref " key " without a " (ref-id-attr env)
-                       " in parent data: " (zip/node parent-data)))
-          (let [backref   (backref (zip/node parent-data) key)
-                parent-id (get (zip/node parent-data) (ref-id-attr env))
+                       " in parent data: " parent-data))
+          (let [backref   (backref parent-data key)
+                parent-id (get parent-data (ref-id-attr env))
                 params    (assoc params [(:forward-attr backref) (ref-id-attr env)] parent-id)
                 singular? (not (:many? backref))
                 attrs     (attrs-from-query-root join-query)]
             (fetch-entity-data (assoc env :following-ref? true)
                                (:entity backref) singular? nil attrs params)))
-        (let [entity-ref  (entity-ref (zip/node parent-data) key)
+        (let [entity-ref  (entity-ref parent-data key)
               singular?   (not (:many? entity-ref))
-              ref-or-refs (get (zip/node parent-data) key)
+              ref-or-refs (get parent-data key)
               id-or-ids   (if (map? ref-or-refs)
                             (get ref-or-refs (ref-id-attr env))
                             (if singular?
@@ -184,36 +178,38 @@
 (defn resolve-join
   "Resolves a join query into data given a parent data node
    (an entity map) and optional parameters."
-  [env opts parent-data z params]
-  (let [join-source (qz/join-source z)
-        join-query (qz/join-query z)]
+  [env opts parent-data q parent-qs params]
+  (let [join-source (p/join-source q)
+        join-query (p/join-query q parent-qs)]
     (cond
-      (qz/ident-expr? join-source)
+      (p/ident-expr? join-source)
       (let [attrs (attrs-from-query-root join-query)]
-        (resolve-ident env opts join-source attrs params))
+        (resolve-ident env opts join-source (cons q parent-qs) attrs params))
 
-      (keyword? (zip/node join-source))
+      (keyword? join-source)
       (if-not parent-data
         (resolve-toplevel-join env opts
                                join-source join-query
+                               (cons q parent-qs)
                                params)
         (resolve-nested-join env opts parent-data
                              join-source join-query
+                             (cons q parent-qs)
                              params)))))
 
 (defn resolve-query-node
   "Resolves a query node z into data given a parent data node
    and optional parameters."
-  [env opts parent-data z params]
+  [env opts parent-data q parent-qs params]
   (cond
-    (keyword? (zip/node z))
-    (resolve-keyword env opts parent-data z params)
+    (keyword? q)
+    (resolve-keyword env opts parent-data q parent-qs params)
 
-    (qz/ident-expr? z)
-    (resolve-ident env opts z [] params)
+    (p/ident-expr? q)
+    (resolve-ident env opts q parent-qs [] params)
 
-    (qz/join-expr? z)
-    (resolve-join env opts parent-data z params)
+    (p/join-expr? q)
+    (resolve-join env opts parent-data q parent-qs params)
 
     :else
     parent-data))
@@ -226,6 +222,4 @@
    (process query data-layer env {}))
   ([query data-layer env opts]
    (let [env' (assoc env :data-layer data-layer)]
-     (zip/node (qz/process (qz/query-zipper query)
-                           (partial resolve-query-node env' opts)
-                           (dz/data-zipper))))))
+     (p/process query nil (partial resolve-query-node env' opts) {}))))

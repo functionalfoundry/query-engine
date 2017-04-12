@@ -2,8 +2,7 @@
   (:require [clojure.test :refer [are]]
             [workflo.macros.entity :as e]
             [workflo.macros.query.om-next :as query.om-next]
-            [workflo.query-engine.core :as qe]
-            [clojure.zip :as zip]))
+            [workflo.query-engine.core :as qe]))
 
 (defn test-process-queries
   [{:keys [connect db data-layer transact resolve-tempid
@@ -289,7 +288,7 @@
 
       ;; Query a key that directly corresponds to a query hook
       {:query [:foo]
-       :query-hooks {:foo (fn [env parent z params] :bar)}
+       :query-hooks {:foo (fn [env parent q parent-qs params] :bar)}
        :viewer (resolve-id -10)}
 
       {:foo :bar}
@@ -297,9 +296,8 @@
       ;; Query using a top-level join that directly corresponds to
       ;; a query hook
       {:query [{:foo [:bar :baz]}]
-       :query-hooks {:foo (fn [env parent z params]
-                            (zipmap (zip/node z)
-                                    (map name (zip/node z))))}
+       :query-hooks {:foo (fn [env parent q parent-qs params]
+                            (zipmap q (map name q)))}
        :viewer (resolve-id -10)}
 
       {:foo {:bar "bar" :baz "baz"}}
@@ -307,7 +305,7 @@
       ;; Query all components with their name and a non-existent
       ;; attribute that triggers a query hook
       {:query [{:components [:component/name :extra-info]}]
-       :query-hooks {:extra-info (fn [env parent z params] :foo)}
+       :query-hooks {:extra-info (fn [env parent q parent-qs params] :foo)}
        :viewer (resolve-id -12)}
 
       {:components
@@ -319,7 +317,7 @@
       ;; to include arbitrary data in the result
       {:query [{:components [:component/name
                              {:extra-info [:a :b]}]}]
-       :query-hooks {:extra-info (fn [env parent z params]
+       :query-hooks {:extra-info (fn [env parent q parent-qs params]
                                    {:a :foo :b :bar})}
        :viewer (resolve-id -12)}
 
@@ -335,7 +333,7 @@
       {:query [{:components [:component/name
                              {:extra [{:foo :bar}
                                       {:bar :baz}]}]}]
-       :query-hooks {:extra (fn [env parent z params]
+       :query-hooks {:extra (fn [env parent q parent-qs params]
                               (with-meta
                                 {:a :b}
                                 {:stop-processing? true}))}
@@ -438,10 +436,7 @@
           #{{:component-state/name "Dislike Button Regular"}
             {:component-state/name "Dislike Button Active"}}}}}
 
-      ;; Query with two joins at the same level - this triggers a bug
-      ;; where zip/up (or something else) drops the meta data on the
-      ;; parent entity when returning from processing the join
-      ;; (see meta-before workaround in query.zip/process-join)
+      ;; Query with two joins at the same level
       {:query [{:accounts [:account/name
                            {:account/users [:user/name
                                             {:user/account [:account/name]}]}
