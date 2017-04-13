@@ -214,12 +214,12 @@
     :else
     parent-data))
 
-(defn process
+(defn process-query
   "Processes an Om Next query given a data layer, an environment
    that is passed through to the data layer, and optional
    processing options."
   ([query data-layer env]
-   (process query data-layer env {}))
+   (process-query query data-layer env {}))
   ([query data-layer env opts]
    (let [env' (assoc env :data-layer data-layer)]
      (p/process query nil (partial resolve-query-node env' opts) {}))))

@@ -15,4 +15,4 @@
   ([query' data-layer env]
    (query query' data-layer env {}))
   ([query' data-layer env opts]
-   (q/process query' data-layer env opts)))
+   (q/process-query query' data-layer env opts)))
