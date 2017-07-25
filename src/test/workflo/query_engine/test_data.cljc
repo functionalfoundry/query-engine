@@ -205,7 +205,7 @@
           (mktempid-reference [id]
             {:db/id id})
           (mktempid-references [ids]
-            (map mktempid-reference ids))]
+            (into [] (map mktempid-reference) ids))]
     (concat (map (fn [account]
                    (-> account
                        (update :db/id mktempid)
