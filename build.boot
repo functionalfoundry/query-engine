@@ -19,23 +19,22 @@
                  [boot-codox "0.10.3" :scope "test"]
 
                  ;; Core
-                 [org.clojure/clojure "1.9.0-alpha15"]
-                 [org.clojure/clojurescript "1.9.495"]
+                 [org.clojure/clojure "1.9.0-alpha17"]
+                 [org.clojure/clojurescript "1.9.671"]
 
                  ;; General
                  [inflections "0.13.0"]
                  [environ "1.1.0"]
 
                  ;; Data layers
-                 [com.datomic/datomic-free "0.9.5561"
-                  :exclusions [com.google.guava/guava]
-                  :scope "test"]
+                 [com.datomic/datomic-free "0.9.5561.50" :scope "test"
+                  :exclusions [com.google.guava/guava]]
                  [datomic-schema "1.3.0" :scope "test"]
-                 [datascript "0.15.5" :scope "test"]
+                 [datascript "0.16.1" :scope "test"]
 
                  ;; Workflo
                  [workflo/boot-tasks "0.1.9" :scope "test"]
-                 [workflo/macros "0.2.52"]])
+                 [workflo/macros "0.2.59"]])
 
 (require '[adzerk.boot-test :as boot-test]
          '[environ.boot :refer [environ]]
