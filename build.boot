@@ -34,6 +34,7 @@
 
                  ;; Workflo
                  [workflo/boot-tasks "0.1.9" :scope "test"]
+                 [workflo/entitydb "0.1.2"]
                  [workflo/macros "0.2.60"]])
 
 (require '[adzerk.boot-test :as boot-test]
