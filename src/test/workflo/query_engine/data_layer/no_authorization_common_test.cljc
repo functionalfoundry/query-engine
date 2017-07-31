@@ -5,7 +5,8 @@
 
 (defn test-fetch-one
   [{:keys [connect db data-layer transact resolve-tempid
-           new-cache cache?]}]
+           new-cache cache? id-attr]
+    :or   {id-attr :db/id}}]
   (println (if cache?
              "Test fetching one with cache"
              "Test fetching one without cache"))
@@ -54,8 +55,8 @@
        :attrs [:db/id :account/name :account/users]}
       {:db/id (resolve-id -1)
        :account/name "Company A"
-       :account/users [{:db/id (resolve-id -10)}
-                       {:db/id (resolve-id -11)}]}
+       :account/users [{id-attr (resolve-id -10)}
+                       {id-attr (resolve-id -11)}]}
 
       ;; Fetch the same account but as a different, (usually) unauthorized
       ;; viewer; for this we'll need a fresh cache as each cache is only
@@ -68,8 +69,8 @@
        :empty-cache? true}
       {:db/id (resolve-id -1)
        :account/name "Company A"
-       :account/users [{:db/id (resolve-id -10)}
-                       {:db/id (resolve-id -11)}]}
+       :account/users [{id-attr (resolve-id -10)}
+                       {id-attr (resolve-id -11)}]}
 
       ;; Fetch a different entity
       {:viewer (resolve-id -10)
@@ -81,10 +82,10 @@
                :component-library/creator
                :component-library/components]}
       {:component-library/name "Shop Components"
-       :component-library/account {:db/id (resolve-id -1)}
-       :component-library/creator {:db/id (resolve-id -10)}
-       :component-library/components [{:db/id (resolve-id -1000)}
-                                      {:db/id (resolve-id -1001)}]}
+       :component-library/account {id-attr (resolve-id -1)}
+       :component-library/creator {id-attr (resolve-id -10)}
+       :component-library/components [{id-attr (resolve-id -1000)}
+                                      {id-attr (resolve-id -1001)}]}
 
       ;; Fetch a non-public component as a (usually) unauthorized user
       {:viewer (resolve-id -12)
@@ -167,7 +168,8 @@
 
 (defn test-fetch-many
   [{:keys [connect db data-layer transact resolve-tempid
-           new-cache cache?]}]
+           new-cache cache? id-attr]
+    :or   {id-attr :db/id}}]
   (println (if cache?
              "Test fetching many with cache"
              "Test fetching many without cache"))
@@ -215,11 +217,11 @@
        :attrs [:db/id :account/name :account/users]}
       #{{:db/id (resolve-id -1)
          :account/name "Company A"
-         :account/users [{:db/id (resolve-id -10)}
-                         {:db/id (resolve-id -11)}]}
+         :account/users [{id-attr (resolve-id -10)}
+                         {id-attr (resolve-id -11)}]}
         {:db/id (resolve-id -2)
          :account/name "Company B"
-         :account/users [{:db/id (resolve-id -12)}]}}
+         :account/users [{id-attr (resolve-id -12)}]}}
 
       ;; Fetch instances of a different entity
       {:viewer (resolve-id -11)
@@ -231,15 +233,15 @@
                :component-library/creator
                :component-library/components]}
       #{{:component-library/name "Shop Components"
-         :component-library/account {:db/id (resolve-id -1)}
-         :component-library/creator {:db/id (resolve-id -10)}
-         :component-library/components [{:db/id (resolve-id -1000)}
-                                        {:db/id (resolve-id -1001)}]}
+         :component-library/account {id-attr (resolve-id -1)}
+         :component-library/creator {id-attr (resolve-id -10)}
+         :component-library/components [{id-attr (resolve-id -1000)}
+                                        {id-attr (resolve-id -1001)}]}
         {:component-library/name "Social Network Components"
-         :component-library/account {:db/id (resolve-id -1)}
-         :component-library/creator {:db/id (resolve-id -10)}
-         :component-library/components [{:db/id (resolve-id -1002)}
-                                        {:db/id (resolve-id -1003)}]}}
+         :component-library/account {id-attr (resolve-id -1)}
+         :component-library/creator {id-attr (resolve-id -10)}
+         :component-library/components [{id-attr (resolve-id -1002)}
+                                        {id-attr (resolve-id -1003)}]}}
 
       ;; Fetch instaces with sorting (ascending)
       {:viewer (resolve-id -10)
@@ -296,8 +298,8 @@
        :params {[:user/account :db/id] (resolve-id -1)}
        :attrs [:user/name :user/account]
        :empty-cache? true}
-      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}
-        {:user/name "Jeff" :user/account {:db/id (resolve-id -1)}}}
+      #{{:user/name "Joe" :user/account {id-attr (resolve-id -1)}}
+        {:user/name "Jeff" :user/account {id-attr (resolve-id -1)}}}
 
       ;; Use deep parameterization to query users that belong
       ;; to the account with the given account name
@@ -307,8 +309,8 @@
        :params {[:user/account :account/name] "Company A"}
        :attrs [:user/name :user/account]
        :empty-cache? true}
-      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}
-        {:user/name "Jeff" :user/account {:db/id (resolve-id -1)}}}
+      #{{:user/name "Joe" :user/account {id-attr (resolve-id -1)}}
+        {:user/name "Jeff" :user/account {id-attr (resolve-id -1)}}}
 
       ;; Use deep parameterization to query users that belong
       ;; to the account with the given account name and that
@@ -320,11 +322,12 @@
                 :user/name "Joe"}
        :attrs [:user/name :user/account]
        :empty-cache? true}
-      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}})))
+      #{{:user/name "Joe" :user/account {id-attr (resolve-id -1)}}})))
 
 (defn test-fetch-all
   [{:keys [connect db data-layer transact resolve-tempid
-           new-cache cache?]}]
+           new-cache cache? id-attr]
+    :or   {id-attr :db/id}}]
   (println (if cache?
              "Test fetching all with cache"
              "Test fetching all without cache"))
@@ -383,14 +386,14 @@
        :attrs [:db/id :account/name :account/users]}
       #{{:db/id (resolve-id -1)
          :account/name "Company A"
-         :account/users [{:db/id (resolve-id -10)}
-                         {:db/id (resolve-id -11)}]}
+         :account/users [{id-attr (resolve-id -10)}
+                         {id-attr (resolve-id -11)}]}
         {:db/id (resolve-id -2)
          :account/name "Company B"
-         :account/users [{:db/id (resolve-id -12)}]}
+         :account/users [{id-attr (resolve-id -12)}]}
         {:db/id (resolve-id -3)
          :account/name "Company C"
-         :account/users [{:db/id (resolve-id -13)}]}}
+         :account/users [{id-attr (resolve-id -13)}]}}
 
       ;; Fetch all component libraries, including the public
       ;; "Event Site Components" library
@@ -402,19 +405,19 @@
                :component-library/creator
                :component-library/components]}
       #{{:component-library/name "Shop Components"
-         :component-library/account {:db/id (resolve-id -1)}
-         :component-library/creator {:db/id (resolve-id -10)}
-         :component-library/components [{:db/id (resolve-id -1000)}
-                                        {:db/id (resolve-id -1001)}]}
+         :component-library/account {id-attr (resolve-id -1)}
+         :component-library/creator {id-attr (resolve-id -10)}
+         :component-library/components [{id-attr (resolve-id -1000)}
+                                        {id-attr (resolve-id -1001)}]}
         {:component-library/name "Social Network Components"
-         :component-library/account {:db/id (resolve-id -1)}
-         :component-library/creator {:db/id (resolve-id -10)}
-         :component-library/components [{:db/id (resolve-id -1002)}
-                                        {:db/id (resolve-id -1003)}]}
+         :component-library/account {id-attr (resolve-id -1)}
+         :component-library/creator {id-attr (resolve-id -10)}
+         :component-library/components [{id-attr (resolve-id -1002)}
+                                        {id-attr (resolve-id -1003)}]}
         {:component-library/name "Event Site Components"
-         :component-library/account {:db/id (resolve-id -2)}
-         :component-library/creator {:db/id (resolve-id -11)}
-         :component-library/components [{:db/id (resolve-id -1004)}]}}
+         :component-library/account {id-attr (resolve-id -2)}
+         :component-library/creator {id-attr (resolve-id -11)}
+         :component-library/components [{id-attr (resolve-id -1004)}]}}
 
       ;; Fetch instaces with sorting (ascending)
       {:viewer (resolve-id -10)
@@ -462,8 +465,8 @@
        :params {[:user/account :db/id] (resolve-id -1)}
        :attrs [:user/name :user/account]
        :empty-cache? true}
-      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}
-        {:user/name "Jeff" :user/account {:db/id (resolve-id -1)}}}
+      #{{:user/name "Joe" :user/account {id-attr (resolve-id -1)}}
+        {:user/name "Jeff" :user/account {id-attr (resolve-id -1)}}}
 
       ;; Use deep parameterization to query users that belong
       ;; to the account with the given account name
@@ -471,8 +474,8 @@
        :entity 'user
        :params {[:user/account :account/name] "Company A"}
        :attrs [:user/name :user/account]}
-      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}
-        {:user/name "Jeff" :user/account {:db/id (resolve-id -1)}}}
+      #{{:user/name "Joe" :user/account {id-attr (resolve-id -1)}}
+        {:user/name "Jeff" :user/account {id-attr (resolve-id -1)}}}
 
       ;; Use deep parameterization to query all users that belong
       ;; to the account with the given account name and that
@@ -483,4 +486,4 @@
                 :user/name "Joe"}
        :attrs [:user/name :user/account]
        :empty-cache? true}
-      #{{:user/name "Joe" :user/account {:db/id (resolve-id -1)}}})))
+      #{{:user/name "Joe" :user/account {id-attr (resolve-id -1)}}})))
