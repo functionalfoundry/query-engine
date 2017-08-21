@@ -54,17 +54,18 @@
 
 
 
-(defn insert-data-into-map [db type-map data]
+(defn insert-data-into-map [db db-config data]
   (let [realized-data (realize-tempids-in-entity data)
-        entity-name   (entities/entity-name realized-data type-map)]
+        entity-name   (entities/entity-name realized-data (get db-config :type-map))]
     (assert entity-name)
-    (ops/add-entity db entity-name realized-data)))
+    (ops/add-entity db db-config entity-name realized-data)))
 
 
 (defn transact-into-map [conn]
-  (let [type-map (entitydb/type-map-from-registered-entities)]
+  (let [db-config {:type-map           (entitydb/type-map-from-registered-entities)
+                   :indexed-attributes (entitydb/indexed-attributes-from-registered-entities)}]
     (swap! conn (fn [db]
-                  (reduce #(insert-data-into-map %1 type-map %2)
+                  (reduce #(insert-data-into-map %1 db-config %2)
                           db test-data/map-data)))))
 
 
