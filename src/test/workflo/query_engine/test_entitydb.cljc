@@ -54,18 +54,18 @@
 
 
 
-(defn insert-data-into-map [db type-map data]
-  (let [realized-data (realize-tempids-in-entity data)
-        entity-name   (entities/entity-name realized-data type-map)]
+(defn insert-data-into-map [db data]
+  (let [db-config     (entitydb/db-config-from-registered-entities)
+        realized-data (realize-tempids-in-entity data)
+        entity-name   (entities/entity-name realized-data (get db-config :type-map))]
     (assert entity-name)
-    (ops/add-entity db entity-name realized-data)))
+    (ops/add-entity db db-config entity-name realized-data)))
 
 
 (defn transact-into-map [conn]
-  (let [type-map (entitydb/type-map-from-registered-entities)]
-    (swap! conn (fn [db]
-                  (reduce #(insert-data-into-map %1 type-map %2)
-                          db test-data/map-data)))))
+  (swap! conn (fn [db]
+                (reduce #(insert-data-into-map %1 %2)
+                        db test-data/map-data))))
 
 
 ;;;; (Atom) map setup
@@ -73,10 +73,12 @@
 
 (def setup
   {:id-attr :workflo/id
+   :ref-id-attr :workflo/id
    :connect (fn []
               (initialize-tempid-map!)
               (atom (entitydb/empty-db)))
    :db deref
+   :db-config (entitydb/db-config-from-registered-entities)
    :transact transact-into-map
    :resolve-tempid resolve-tempid
    :data-layer dl/data-layer

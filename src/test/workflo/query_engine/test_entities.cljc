@@ -9,7 +9,7 @@
 
 ;;;; Account
 
-(s/def :account/name ::t/string)
+(s/def :account/name (s/and ::t/string ::t/indexed))
 (s/def :account/users (t/entity-ref 'user :many? true))
 (s/def :account/libraries (t/entity-ref 'component-library :many? true))
 
@@ -29,10 +29,10 @@
 
 ;;;; User
 
-(s/def :user/name ::t/string)
-(s/def :user/email ::t/string)
+(s/def :user/name (s/and ::t/string ::t/indexed))
+(s/def :user/email (s/and ::t/string ::t/indexed))
 (s/def :user/password ::t/string)
-(s/def :user/account (t/entity-ref 'account))
+(s/def :user/account (s/and (t/entity-ref 'account) ::t/indexed))
 
 (defentity user
   (spec
