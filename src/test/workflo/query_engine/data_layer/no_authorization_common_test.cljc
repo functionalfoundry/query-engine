@@ -4,7 +4,7 @@
             [workflo.query-engine.data-layer :as data-layer]))
 
 (defn test-fetch-one
-  [{:keys [connect db data-layer transact resolve-tempid
+  [{:keys [connect db db-config data-layer transact resolve-tempid
            new-cache cache? id-attr]
     :or   {id-attr :db/id}}]
   (println (if cache?
@@ -22,6 +22,7 @@
                          empty-cache?]} args]
              (data-layer/fetch-one layer
                                    {:db (db conn)
+                                    :db-config db-config
                                     :cache (if empty-cache?
                                              (new-cache)
                                              shared-cache)
@@ -167,7 +168,7 @@
       nil)))
 
 (defn test-fetch-many
-  [{:keys [connect db data-layer transact resolve-tempid
+  [{:keys [connect db db-config data-layer transact resolve-tempid
            new-cache cache? id-attr]
     :or   {id-attr :db/id}}]
   (println (if cache?
@@ -185,6 +186,7 @@
                          empty-cache?]} args]
              (data-layer/fetch-many layer
                                     {:db (db conn)
+                                     :db-config db-config
                                      :cache (if empty-cache?
                                               (new-cache)
                                               shared-cache)
@@ -325,7 +327,7 @@
       #{{:user/name "Joe" :user/account {id-attr (resolve-id -1)}}})))
 
 (defn test-fetch-all
-  [{:keys [connect db data-layer transact resolve-tempid
+  [{:keys [connect db db-config data-layer transact resolve-tempid
            new-cache cache? id-attr]
     :or   {id-attr :db/id}}]
   (println (if cache?
@@ -343,6 +345,7 @@
                          empty-cache?]} args]
              (data-layer/fetch-all layer
                                    {:db (db conn)
+                                    :db-config db-config
                                     :cache (if empty-cache?
                                              (new-cache)
                                              shared-cache)
