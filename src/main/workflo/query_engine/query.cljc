@@ -1,6 +1,5 @@
 (ns workflo.query-engine.query
   (:require [clojure.string :as string]
-            [inflections.core :as inflections]
             [workflo.macros.entity :as e]
             [workflo.macros.query.util :as query.util]
             [workflo.query-engine.data-layer :as data-layer]
@@ -34,7 +33,7 @@
   (let [ns (namespace k)
         nm (name k)]
     [(keyword ns (subs nm 1))
-     (keyword (inflections/singular ns) (subs nm 1))]))
+     (keyword (util/singular ns) (subs nm 1))]))
 
 (defn backref
   "Returns the target entity definition, the forward ref attribute
@@ -70,7 +69,7 @@
    not :users)."
   [k]
   (= (util/qualified-name k)
-     (inflections/singular (util/qualified-name k))))
+     (util/singular (util/qualified-name k))))
 
 ;;;; Data fetching
 
