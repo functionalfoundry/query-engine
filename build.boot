@@ -10,7 +10,7 @@
      :password (System/getenv "WORKFLO_REPOSITORIES_PASSWORD")}]])
 
 (set-env!
- :resource-paths #{"src/main"}
+ :resource-paths #{"src/main" "resources"}
  :repositories #(concat % +repositories+)
  :dependencies '[;; Boot
                  [adzerk/boot-cljs "2.0.0" :scope "test"]
@@ -38,6 +38,7 @@
                  [workflo/macros "0.2.63"]])
 
 (require '[adzerk.boot-test :as boot-test]
+         '[codox.boot :refer [codox]]
          '[environ.boot :refer [environ]]
          '[workflo.boot-tasks :refer :all])
 
@@ -71,3 +72,12 @@
   []
   (comp (dev-env)
         (repl)))
+
+(deftask docs
+  []
+  (comp (codox :name "workflo/query-engine"
+               :source-paths #{"src/main"}
+               :output-path "docs"
+               :metadata {:doc/format :markdown}
+               :themes [:default :query-engine])
+        (target)))
