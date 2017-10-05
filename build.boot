@@ -1,20 +1,16 @@
 #!/usr/bin/env boot
 
+
 (def +project+ 'workflo/query-engine)
 (def +version+ "0.1.30")
 
-(def +repositories+
-  [["workflo-private"
-    {:url "https://workflo.jfrog.io/workflo/workflo-private"
-     :username (System/getenv "WORKFLO_REPOSITORIES_USERNAME")
-     :password (System/getenv "WORKFLO_REPOSITORIES_PASSWORD")}]])
 
 (set-env!
  :resource-paths #{"src/main" "resources"}
- :repositories #(concat % +repositories+)
  :dependencies '[;; Boot
                  [adzerk/boot-cljs "2.0.0" :scope "test"]
                  [adzerk/boot-test "1.2.0" :scope "test"]
+                 [adzerk/bootlaces "0.1.13" :scope "test"]
                  [boot-environ "1.1.0" :scope "test"]
                  [boot-codox "0.10.3" :scope "test"]
 
@@ -33,28 +29,38 @@
                  [datascript "0.16.1" :scope "test"]
 
                  ;; Workflo
-                 [workflo/boot-tasks "0.1.9" :scope "test"]
                  [workflo/entitydb "0.1.6"]
                  [workflo/macros "0.2.63"]])
 
-(require '[adzerk.boot-test :as boot-test]
-         '[codox.boot :refer [codox]]
-         '[environ.boot :refer [environ]]
-         '[workflo.boot-tasks :refer :all])
 
-(workflo-setup! :project +project+
-                :version +version+
-                :library true
-                :push-repo "workflo-private")
+(require '[adzerk.boot-test :refer [test] :rename {test test-clj}]
+         '[adzerk.bootlaces :refer :all]
+         '[boot.git :refer [last-commit]]
+         '[codox.boot :refer [codox]]
+         '[environ.boot :refer [environ]])
+
+
+(bootlaces! +version+ :dont-modify-paths? true)
+
 
 (task-options!
- pom {:description "Workflo query engine"
-      :url "https://github.com/workfloapp/query-engine"
-      :scm {:url "https://github.com/workfloapp/query-engine"}})
+ push      {:repo "deploy-clojars"
+            :ensure-branch "master"
+            :ensure-clean true
+            :ensure-tag (last-commit)
+            :ensure-version +version+}
+ pom       {:project +project+
+            :version +version+
+            :description "Execute Om Next queries against various data layers"
+            :url "https://github.com/workfloapp/query-engine"
+            :scm {:url "https://github.com/workfloapp/query-engine"}
+            :license {"MIT License" "https://opensource.org/licenses/MIT"}})
+
 
 (deftask dev-env
   []
   (environ :env {:datomic-uri "datomic:mem://workflo-query-engine"}))
+
 
 (deftask test-env
   []
@@ -63,15 +69,19 @@
           (merge-env! :source-paths #{"src/test"})
           fileset)))
 
+
 (deftask test
   []
-  (comp (test-env)
-        (boot-test/test)))
+  (comp (dev-env)
+        (test-env)
+        (test-clj)))
+
 
 (deftask dev
   []
   (comp (dev-env)
         (repl)))
+
 
 (deftask docs
   []
@@ -81,3 +91,24 @@
                :metadata {:doc/format :markdown}
                :themes [:default :query-engine])
         (target)))
+
+
+(deftask install-local
+  []
+  (comp (pom)
+        (jar)
+        (install)))
+
+
+(deftask deploy-snapshot
+  []
+  (comp (pom)
+        (jar)
+        (push-snapshot)))
+
+
+(deftask deploy-release
+  []
+  (comp (pom)
+        (jar)
+        (push-release)))
