@@ -1,7 +1,7 @@
 # workflo/query-engine
 
 [![Clojars Project](https://img.shields.io/clojars/v/workflo/query-engine.svg)](https://clojars.org/workflo/query-engine)
-[![Build Status](https://travis-ci.org/functionalfoundry/query-engine.svg?branch=master)](https://travis-ci.org/functonalfoundry/query-engine)
+[![Build Status](https://travis-ci.org/functionalfoundry/query-engine.svg?branch=master)](https://travis-ci.org/functionalfoundry/query-engine)
 
 [API docs](https://functionalfoundry.github.io/entitydb/)
 
