@@ -3,7 +3,7 @@
 [![Clojars Project](https://img.shields.io/clojars/v/workflo/query-engine.svg)](https://clojars.org/workflo/query-engine)
 [![Build Status](https://travis-ci.org/functionalfoundry/query-engine.svg?branch=master)](https://travis-ci.org/functionalfoundry/query-engine)
 
-[API docs](https://functionalfoundry.github.io/entitydb/)
+[API docs](http://functionalfoundry.github.io/query-engine/)
 
 The `workflo/query-engine` allows to execute [Om Next](https://github.com/omcljs/om)
 queries against different data layers, including:
